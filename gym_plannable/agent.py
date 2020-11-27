@@ -1,4 +1,5 @@
 from .common import ClosedEnvSignal
+from threading import Thread
 import numpy as np
 import time
 import abc
@@ -55,6 +56,12 @@ class BaseAgent:
     @abc.abstractmethod
     def select_action(self, state):
         pass
+
+    def start(self):
+        """
+        Starts the agent in a new thread.
+        """
+        return Thread(target=self).start()
 
 class LegalAgent(BaseAgent):
     def select_action(self, state):
