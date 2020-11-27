@@ -316,7 +316,8 @@ try:
             """.replace("{{UUID_STR}}", self.id)))
             
             display(Javascript(
-                jupyter_javascript_routines + ttc_javascript(self.id, board_height, board_width)
+                jupyter_javascript_routines + ttc_javascript(self.id,
+                    board_height, board_width)
             ))
 
     def ttc_javascript(uuid_str, board_height, board_width):
@@ -357,8 +358,6 @@ try:
                 } else if(winner.length != 0 && winner.length != 2) {
                     cls = 'ttt_losing';
                 }
-
-                console.log(winner, winning_seq, cls);
 
                 for (var i=0; i < winning_seq.length; i++) {
                     this.board[
