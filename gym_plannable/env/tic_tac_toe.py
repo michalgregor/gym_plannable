@@ -312,7 +312,7 @@ try:
             }
             </style>
 
-            <div id="ttt_container_{{UUID_STR}}">TEST</div>
+            <div id="ttt_container_{{UUID_STR}}"></div>
             """.replace("{{UUID_STR}}", self.id)))
             
             display(Javascript(
