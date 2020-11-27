@@ -43,6 +43,7 @@ class SharedState:
         self.rewards = np.zeros(num_agents)
         self.done_barrier = Barrier(num_agents)
         self._obs_tuple = [None, 0, False, {}]
+        self._is_initial_state = True
         self.reset_done = False
         self.reset_counters()
         self._closed_signal = False
@@ -142,13 +143,15 @@ class SingleAgentEnvTurnBased(gym.Wrapper):
         # if was_reset is true, this agent was already reset after a terminal
         # state has last been reached; if requesting a reset in the middle of
         # an episode, the other agents need to be signalled
-        if self.shared_state.was_reset(self.agentid):
+        if (self.shared_state.was_reset(self.agentid) and 
+           not self.shared_state._is_initial_state):
             # augment obs_tuple with info about the episode being interrupted
             self.shared_state.obs_tuple[3]['interrupted'] = True
             self.shared_state.signal_done(self.agentid)
 
         # if reset of the underlying env not already done, do it now
         if not self.shared_state.reset_done:
+            self.shared_state._is_initial_state = True
             self.shared_state.obs_tuple = (self.env.reset(),)
             self.shared_state.rewards *= 0
 
@@ -188,6 +191,7 @@ class SingleAgentEnvTurnBased(gym.Wrapper):
         assert self.shared_state.was_reset(self.agentid)
 
         # perform the step
+        self.shared_state._is_initial_state = False
         self.shared_state.obs_tuple = self.env.step(action, self.agentid)
         # accumulate rewards
         self.shared_state.rewards += self.shared_state.obs_tuple[1]
