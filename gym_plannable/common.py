@@ -1,0 +1,2 @@
+class ClosedEnvSignal(Exception):
+    pass
