@@ -5,10 +5,10 @@ import time
 import abc
 
 class BaseAgent:
-    def __init__(self, env, num_epochs, max_steps=None,
+    def __init__(self, env, num_episodes=None, max_steps=None,
                  verbose=True, show_times=True):
         self.env = env
-        self.num_epochs = num_epochs
+        self.num_episodes = num_episodes
         self.max_steps = max_steps
         self.verbose = verbose
         self.step = 0
@@ -23,7 +23,7 @@ class BaseAgent:
         try:
             self.episode = 0
 
-            for i in range(self.num_epochs):
+            while self.num_episodes is None or self.episode < self.num_episodes:
                 self.env.reset()
                 done = False
                 self.steps = 0
@@ -52,6 +52,12 @@ class BaseAgent:
 
         except ClosedEnvSignal:
             if self.verbose: print("Exited because of a closed environment.")
+
+        except:
+            # if the agent crashes irretrievably, make sure the
+            # env is finished to prevent lock ups in the remaining threads
+            self.env.finish()
+            raise
 
     @abc.abstractmethod
     def select_action(self, state):
