@@ -1,1 +1,1 @@
-from .tic_tac_toe import JavascriptAgent, TicTacToeEnv, TicTacToeState
+from .tic_tac_toe import TicTacToeAgentJavascript, TicTacToeEnv, TicTacToeState

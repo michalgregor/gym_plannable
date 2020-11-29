@@ -241,7 +241,7 @@ try:
     from IPython.display import display, HTML, Javascript
     import uuid
 
-    class JavascriptAgent:
+    class TicTacToeAgentJavascript:
         def __init__(self, env):
             self.id = uuid.uuid1().hex
             self.env = env
