@@ -1,6 +1,7 @@
 from .common import ClosedEnvSignal
 from threading import Thread
 import numpy as np
+import random
 import time
 import abc
 
@@ -72,5 +73,5 @@ class BaseAgent:
 class LegalAgent(BaseAgent):
     def select_action(self, state):
         legals = state.legal_actions()
-        action = legals[np.random.choice(len(legals))]
+        action = random.choice(legals)
         return action
