@@ -42,12 +42,12 @@ class BaseAgent:
                     state = self.env.plannable_state()
 
                     if self.show_times:
-                        start = time.thread_time()
+                        start = time.perf_counter()
 
                     action = self.select_action(state)
 
                     if self.show_times:
-                        end = time.thread_time()
+                        end = time.perf_counter()
                         print("Action selected in {} s.".format(end-start))
                     
                     _, _, done, info = self.env.step(action)
