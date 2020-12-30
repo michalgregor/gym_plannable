@@ -237,7 +237,7 @@ class Minimax(BaseAgent):
         return maxval
 
 try:
-    from notebook_invoke import register_callback, jupyter_javascript_routines
+    from notebook_invoke import register_callback, remove_callback, jupyter_javascript_routines
     from IPython.display import display, HTML, Javascript
     import uuid
 
@@ -246,23 +246,12 @@ try:
             self.id = uuid.uuid1().hex
             self.env = env
 
-            def reset():
-                obs = self.env.reset()
-                return {'board': obs.tolist()}
-
-            def step(action):
-                obs, reward, done, info = self.env.step(action)
-                return {'board': obs.tolist(),
-                        'reward': reward,
-                        'done': done,
-                        'info': info}
-
             register_callback(
-                'reset_' + self.id, reset
+                'reset_' + self.id, self.reset
             )
 
             register_callback(
-                'step_' + self.id, step
+                'step_' + self.id, self.step
             )
 
             board_height, board_width = self.env.observation_space.shape
@@ -319,6 +308,21 @@ try:
                 jupyter_javascript_routines + ttc_javascript(self.id,
                     board_height, board_width)
             ))
+
+        def reset(self):
+            obs = self.env.reset()
+            return {'board': obs.tolist()}
+
+        def step(self, action):
+            obs, reward, done, info = self.env.step(action)
+            return {'board': obs.tolist(),
+                    'reward': reward,
+                    'done': done,
+                    'info': info}
+
+        def __del__(self):
+            remove_callback('reset_' + self.id)
+            remove_callback('step_' + self.id)
 
     def ttc_javascript(uuid_str, board_height, board_width):
         return ("""
