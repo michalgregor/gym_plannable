@@ -5,6 +5,15 @@ from threading import Event, Barrier
 import numpy as np
 import itertools
 
+class TurnBasedStateMixin:
+    @property
+    @abc.abstractmethod
+    def agent_turn(self):
+        """
+        Returns the numeric index of the agent which is going to move next.
+        """
+        pass
+
 class TurnBasedEnv(gym.Env):
     def __init__(self, num_agents):
         super().__init__()

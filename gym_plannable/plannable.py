@@ -42,6 +42,10 @@ class PlannableState:
     def observation(self):
         pass
 
+class PlannableStateDeterministic(PlannableState):
+    def all_next(self, action, *args, **kwargs):
+        return ((self.next(action, *args, **kwargs), 1.0) for i in range(1))
+
 class PlannableEnv(gym.Env):
     @abc.abstractmethod
     def plannable_state(self) -> PlannableState:
@@ -49,7 +53,3 @@ class PlannableEnv(gym.Env):
         Returns the environment's current state as PlannableState.
         """
         pass
-
-class PlannableStateDeterministic(PlannableState):
-    def all_next(self, action, *args, **kwargs):
-        return ((self.next(action, *args, **kwargs), 1.0) for i in range(1))
