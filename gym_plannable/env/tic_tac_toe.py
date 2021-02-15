@@ -1,14 +1,14 @@
 from ..plannable import PlannableStateDeterministic, PlannableEnv
-from ..turn_based import TurnBasedEnv, TurnBasedStateMixin
+from ..turn_based import TurnBasedEnv, TurnBasedState
 from ..agent import BaseAgent
 from copy import deepcopy
 import numpy as np
 import gym
 
-class TicTacToeState(TurnBasedStateMixin, PlannableStateDeterministic):
+class TicTacToeState(TurnBasedState, PlannableStateDeterministic):
     def __init__(self, size=3, score_tracker=None):
         super().__init__(score_tracker=score_tracker)
-        self.num_agents = 2
+        self._num_agents = 2
         self._agent_turn = 0
         self.agent_turn_prev = None
         self.size = size
@@ -16,7 +16,7 @@ class TicTacToeState(TurnBasedStateMixin, PlannableStateDeterministic):
         self.num_empty = self.size**2
         self.winner = []
         self.winning_seq = []
-        self._rewards = np.zeros(self.num_agents)
+        self._rewards = np.zeros(self._num_agents)
 
     @property
     def agent_turn(self):
@@ -24,6 +24,10 @@ class TicTacToeState(TurnBasedStateMixin, PlannableStateDeterministic):
         Returns the numeric index of the agent which is going to move next.
         """
         return self._agent_turn
+
+    @property
+    def num_agents(self):
+        return self._num_agents
 
     @property
     def observation(self):
@@ -35,9 +39,9 @@ class TicTacToeState(TurnBasedStateMixin, PlannableStateDeterministic):
 
     def _update_rewards(self):
         if len(self.winner) == 0 or None in self.winner:
-            self._rewards = np.zeros(self.num_agents)
+            self._rewards = np.zeros(self._num_agents)
         else:
-            self._rewards = np.full(self.num_agents, -1)
+            self._rewards = np.full(self._num_agents, -1)
             for agentid in self.winner:
                 self._rewards[agentid] = 1
 
@@ -74,7 +78,7 @@ class TicTacToeState(TurnBasedStateMixin, PlannableStateDeterministic):
 
         # it's the other player's turn next
         state.agent_turn_prev = state._agent_turn
-        state._agent_turn = (state._agent_turn + 1) % state.num_agents
+        state._agent_turn = (state._agent_turn + 1) % state._num_agents
 
         # update the rewards and the scores
         state._update_rewards()
