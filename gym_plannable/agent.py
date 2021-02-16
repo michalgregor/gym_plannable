@@ -76,7 +76,7 @@ class BaseAgent:
 
     @abc.abstractmethod
     def select_action(self, state):
-        pass
+        raise NotImplementedError()
 
     def start(self):
         """

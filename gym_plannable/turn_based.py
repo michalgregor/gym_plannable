@@ -12,6 +12,7 @@ class TurnBasedState:
         """
         Returns the numeric index of the agent which is going to move next.
         """
+        raise NotImplementedError()
 
     @property
     @abc.abstractmethod
@@ -19,6 +20,7 @@ class TurnBasedState:
         """
         Returns the number of agents in the environment.
         """
+        raise NotImplementedError()
 
 class TurnBasedEnv(gym.Env):
     def __init__(self, num_agents):
@@ -31,7 +33,7 @@ class TurnBasedEnv(gym.Env):
         """
         Returns the numeric index of the agent which is going to move next.
         """
-        pass
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def step(self, action, agentid=None):
@@ -49,7 +51,7 @@ class TurnBasedEnv(gym.Env):
           * agentid: The id of the agent that selected the action. If None,
             self.agent_turn will be used instead.
         """
-        pass
+        raise NotImplementedError()
 
 class SharedState:
     def __init__(self, num_agents):

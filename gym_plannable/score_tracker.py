@@ -3,11 +3,12 @@ import abc
 class ScoreTracker:
     @abc.abstractmethod
     def update_scores(self, rewards):
-        pass
+        raise NotImplementedError()
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def scores(self):
-        pass
+        raise NotImplementedError()
 
 class ScoreTrackerTotal(ScoreTracker):
     def __init__(self):

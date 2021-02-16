@@ -41,6 +41,7 @@ class PlannableState:
         """
         Returns an initial state.
         """
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def all_init(self):
@@ -48,18 +49,21 @@ class PlannableState:
         Returns a generator of (state, probability) tuples for all possible
         initial states.
         """
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def legal_actions(self):
         """
         Returns the sequence of all actions that are legal in the state.
         """
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def _next(self, action, *args, **kwargs):
         """
         Returns the next state. If stochastic, one random next state is sampled.
         """
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def _all_next(self, action, *args, **kwargs):
@@ -67,25 +71,30 @@ class PlannableState:
         Returns a generator of (state, probability) tuples for all possible
         next states.
         """
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def is_done(self):
         """
         Returns whether this is a terminal state or not.
         """
+        raise NotImplementedError()
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def rewards(self):
         """
         Returns a sequence containing the rewards for all agents (for a
         single-agent environment this is going to be a sequence with 1 item).
         """
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def observation(self):
         """
         Returns the observation associated with the state.
         """
+        raise NotImplementedError()
 
 class PlannableStateDeterministic(PlannableState):
     def all_init(self):
@@ -102,4 +111,4 @@ class PlannableEnv(gym.Env):
 
         This function must be callable before reset().
         """
-        pass
+        raise NotImplementedError()
