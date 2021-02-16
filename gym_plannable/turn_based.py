@@ -24,8 +24,19 @@ class TurnBasedState:
 
 class TurnBasedEnv(gym.Env):
     def __init__(self, num_agents):
+        """
+        A base class for multiplayer environments.
+
+        Unlike the base gym.Env, action_space, observation_space
+        and reward_range should all be lists: there should be an entry
+        for each agent.
+
+        You can use turn_based_to_single_agent() to turn a TurnBasedEnv into
+        several connected single-agent environments.
+        """
         super().__init__()
         self.num_agents = num_agents
+        self.reward_range = [self.reward_range] * self.num_agents
 
     @property
     @abc.abstractmethod
@@ -152,6 +163,8 @@ class SingleAgentEnvTurnBased(gym.Wrapper):
         super().__init__(turn_based_env)
         self.agentid = agentid
         self.shared_state = shared_state
+        self.observation_space = turn_based_env.observation_space[agentid]
+        self.action_space = turn_based_env.action_space[agentid]
 
     def reset(self):
         # wait our turn

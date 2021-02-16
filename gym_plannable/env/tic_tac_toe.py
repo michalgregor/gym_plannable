@@ -149,17 +149,17 @@ class TicTacToeEnv(TurnBasedEnv, PlannableEnv):
         super().__init__(num_agents=state.num_agents)
         self._state = state
 
-        self.observation_space = gym.spaces.Box(
+        self.observation_space = [gym.spaces.Box(
             low=np.full((size, size), -1, dtype=np.int),
             high=np.full((size, size), self.num_agents-1, dtype=np.int),
             dtype=np.int
-        )
+        )] * state.num_agents
 
-        self.action_space = gym.spaces.Box(
+        self.action_space = [gym.spaces.Box(
             low=np.asarray((0, 0), dtype=np.int),
             high=np.asarray((size-1, size-1), dtype=np.int),
             dtype=np.int
-        )
+        )] * state.num_agents
 
     def plannable_state(self):
         return self._state
