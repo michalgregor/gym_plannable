@@ -23,7 +23,7 @@ class TurnBasedState:
         raise NotImplementedError()
 
 class TurnBasedEnv(gym.Env):
-    def __init__(self, num_agents):
+    def __init__(self, num_agents, **kwargs):
         """
         A base class for multiplayer environments.
 
@@ -34,7 +34,7 @@ class TurnBasedEnv(gym.Env):
         You can use turn_based_to_single_agent() to turn a TurnBasedEnv into
         several connected single-agent environments.
         """
-        super().__init__()
+        super().__init__(**kwargs)
         self.num_agents = num_agents
         self.reward_range = [self.reward_range] * self.num_agents
 
@@ -54,8 +54,9 @@ class TurnBasedEnv(gym.Env):
         a ValueError is raised (useful as a consistency check).
 
         This returns what a single-agent step method would return except that
-        instead of a single reward, there will be a list of rewards, one
-        for each agent.
+        if num_agents > 1, a list of num_agents rewards will be returned. If
+        num_agents == 1, a scalar reward will be returned to maintain
+        compatibility with the standard OpenAI Gym interface.
 
         Arguments:
           * action: The action to apply.
@@ -159,8 +160,8 @@ class SharedState:
             self.clear_turn(agentid)
 
 class SingleAgentEnvTurnBased(gym.Wrapper):
-    def __init__(self, turn_based_env, shared_state, agentid):
-        super().__init__(turn_based_env)
+    def __init__(self, turn_based_env, shared_state, agentid, **kwargs):
+        super().__init__(turn_based_env, **kwargs)
         self.agentid = agentid
         self.shared_state = shared_state
         self.observation_space = turn_based_env.observation_space[agentid]

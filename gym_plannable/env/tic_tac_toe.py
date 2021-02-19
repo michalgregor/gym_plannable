@@ -6,8 +6,8 @@ import numpy as np
 import gym
 
 class TicTacToeState(TurnBasedState, PlannableStateDeterministic):
-    def __init__(self, size=3, score_tracker=None):
-        super().__init__(score_tracker=score_tracker)
+    def __init__(self, size=3, score_tracker=None, **kwargs):
+        super().__init__(score_tracker=score_tracker, **kwargs)
         self._num_agents = 2
         self._agent_turn = 0
         self.agent_turn_prev = None
@@ -141,12 +141,12 @@ class TicTacToeState(TurnBasedState, PlannableStateDeterministic):
             return
     
 class TicTacToeEnv(TurnBasedEnv, PlannableEnv):
-    def __init__(self, size=3):
+    def __init__(self, size=3, **kwargs):
         """
         The constructor; the board has dimensions size x size.
         """
         state = TicTacToeState(size)
-        super().__init__(num_agents=state.num_agents)
+        super().__init__(num_agents=state.num_agents, **kwargs)
         self._state = state
 
         self.observation_space = [gym.spaces.Box(
