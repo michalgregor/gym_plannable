@@ -1,37 +1,45 @@
 from ..plannable import PlannableStateDeterministic, PlannableEnv
-from ..turn_based import TurnBasedEnv, TurnBasedState
 from ..agent import BaseAgent
 from copy import deepcopy
 import numpy as np
 import gym
 
-class TicTacToeState(TurnBasedState, PlannableStateDeterministic):
+class TicTacToeState(PlannableStateDeterministic):
     def __init__(self, size=3, score_tracker=None, **kwargs):
         super().__init__(score_tracker=score_tracker, **kwargs)
-        self._num_agents = 2
-        self._agent_turn = 0
-        self.agent_turn_prev = None
         self.size = size
-        self.board = np.full((self.size, self.size), -1, dtype=np.int)
-        self.num_empty = self.size**2
-        self.winner = []
-        self.winning_seq = []
-        self._rewards = np.zeros(self._num_agents)
+        self.init(inplace=True)
+
+    def init(self, inplace=False):
+        if not inplace:
+            state = deepcopy(self)
+        else:
+            state = self
+
+        state._num_agents = 2
+        state._agent_turn = 0
+        state.agent_turn_prev = None
+        state.board = np.full((state.size, state.size), -1, dtype=np.int)
+        state.num_empty = state.size**2
+        state.winner = []
+        state.winning_seq = []
+        state._rewards = np.zeros(state._num_agents)
+
+        return state
 
     @property
     def agent_turn(self):
         """
         Returns the numeric index of the agent which is going to move next.
         """
-        return self._agent_turn
+        return [self._agent_turn]
 
     @property
     def num_agents(self):
         return self._num_agents
 
-    @property
     def observation(self):
-        return deepcopy(self.board)
+        return [deepcopy(self.board)] * self.num_agents
     
     @property
     def rewards(self):
@@ -47,23 +55,25 @@ class TicTacToeState(TurnBasedState, PlannableStateDeterministic):
 
     def legal_actions(self):
         """
-        Returns the space of all actions legal at the current step.
+        Returns the space of all actions legal at the current step for each agent.
         """
-        if self.is_done(): return np.array([])
-        else: return np.argwhere(self.board == -1)
+        if np.all(self.is_done()): legals = np.array([])
+        else: legals = np.argwhere(self.board == -1)
+        return [legals] * self.num_agents
 
-    def _next(self, action, agentid=None, in_place=False):
-        if not in_place:
+    def _next(self, actions, agentid=None, inplace=False):
+        if not inplace:
             state = deepcopy(self)
         else:
             state = self
 
-        x, y = action
+        assert len(actions) == 1
+        x, y = actions[0]
 
-        if not agentid is None and agentid != state._agent_turn:
+        if not agentid is None and agentid != state.agent_turn:
             raise ValueError("It is not agent {}'s turn.".format(agentid))
         
-        if(state.is_done()):
+        if(np.all(state.is_done())):
             raise ValueError('Illegal action: the game is over.')
 
         if(state.board[x, y] != -1):
@@ -89,7 +99,7 @@ class TicTacToeState(TurnBasedState, PlannableStateDeterministic):
         """
         Returns whether the game is over.
         """
-        return len(self.winner) > 0
+        return [len(self.winner) > 0 for i in range(self.num_agents)]
         
     def _check_done(self, x, y, agent_turn):
         # Check row x and column y.
@@ -140,7 +150,7 @@ class TicTacToeState(TurnBasedState, PlannableStateDeterministic):
             self.winner = [None]
             return
     
-class TicTacToeEnv(TurnBasedEnv, PlannableEnv):
+class TicTacToeEnv(PlannableEnv):
     def __init__(self, size=3, **kwargs):
         """
         The constructor; the board has dimensions size x size.
@@ -161,6 +171,13 @@ class TicTacToeEnv(TurnBasedEnv, PlannableEnv):
             dtype=np.int
         )] * state.num_agents
 
+        self.reward_range = [self.reward_range] * self.num_agents
+
+        if self.num_agents == 1:
+            self.observation_space = self.observation_space[0]
+            self.action_space = self.action_space[0]
+            self.reward_range = self.reward_range[0]
+
     def plannable_state(self):
         return self._state
 
@@ -170,82 +187,26 @@ class TicTacToeEnv(TurnBasedEnv, PlannableEnv):
 
     def reset(self):
         self._state = TicTacToeState(self._state.size)
-        return self._state.observation
+        return self._state.observation()
  
-    def step(self, action, agentid=None):
+    def step(self, action):
         """
         Performs the action and returns the next observation, reward,
         done flag and info dict.
         """
-        agentid = agentid or self._state.agent_turn
-        self._state.next(action, agentid=agentid, in_place=True)
+        action = self._wrap_inputs(action)
+        assert len(action) == 1 # only one agent is turning at each step
+        self._state.next(action, agentid=self.agent_turn, inplace=True)
+
+        obs = self._state.observation()
         rewards = self._state.rewards
-        done = self._state.is_done()
-        
-        return self._state.observation, rewards, done, {
+        is_done = self._state.is_done()
+        info = [{
             'winning_seq': self._state.winning_seq,
             'winner': self._state.winner
-        }
+        }] * self.num_agents
 
-class Minimax(BaseAgent):
-    def select_action(self, state):
-        # query for legal actions
-        legals = state.legal_actions()
-
-        # go over all legal actions and find the one
-        # that maximizes our player's score
-        maxval = -np.inf
-        maxa = None
-
-        for a in legals:
-            next_state = state.next(a)
-            val = self.min_value(next_state)
-
-            if(val > maxval):
-                maxval = val
-                maxa = a
-
-        return maxa
-
-    def min_value(self, state):
-        # Ending the recursion: if the game is over, return the score.
-        if state.is_done(): return state.scores[self.agentid]
-
-        # query for legal actions
-        legals = state.legal_actions()
-
-        # go over all legal actions and find the one that minimizes
-        # our player's score (we assume the opponent will want to do that)
-        minval = np.inf
-
-        for a in legals:
-            next_state = state.next(a)
-            val = self.max_value(next_state)
-
-            if(val < minval):
-                minval = val
-
-        return minval
-
-    def max_value(self, state):
-        # Ending the recursion: if the game is over, return the score.
-        if state.is_done(): return state.scores[self.agentid]
-
-        # query for legal actions
-        legals = state.legal_actions()
-
-        # go over all legal actions and find the one
-        # that maximizes our player's score
-        maxval = -np.inf
-
-        for a in legals:
-            next_state = state.next(a)
-            val = self.min_value(next_state)
-
-            if(val > maxval):
-                maxval = val
-
-        return maxval
+        return self._wrap_outputs(obs, rewards, is_done, info)
 
 try:
     from notebook_invoke import register_callback, remove_callback, jupyter_javascript_routines

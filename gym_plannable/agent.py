@@ -63,7 +63,7 @@ class BaseAgent:
 
                 self.episode += 1
 
-            self.env.finish()
+            self.env.close()
 
         except ClosedEnvSignal:
             if self.verbose: print("Exited because of a closed environment.")
@@ -71,7 +71,7 @@ class BaseAgent:
         except:
             # if the agent crashes irretrievably, make sure the
             # env is finished to prevent lock ups in the remaining threads
-            self.env.finish()
+            self.env.close()
             raise
 
     @abc.abstractmethod
