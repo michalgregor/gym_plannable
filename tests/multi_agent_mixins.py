@@ -255,3 +255,13 @@ class ClientTestMixin:
 
         self.assertTrue(self.agent0_done)
         self.assertTrue(self.agent1_done)
+
+class ClientScoreTestMixin(ClientTestMixin):
+    scores = None
+
+    def testRun(self):
+        super().testRun()
+        self.assertEqual(
+            list(self.multiagent_env.plannable_state().scores()),
+            list(self.scores)
+        )
