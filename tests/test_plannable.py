@@ -71,3 +71,12 @@ class PlannableInterfaceTest(unittest.TestCase):
             if istate >= self.max_next: break
             self.assertIsInstance(state, PlannableState)
             self.assertIsInstance(prob, numbers.Number)
+
+    def testIsDoneNotBool(self):
+        # to avoid silent errors, is_done is supposed to return 
+        # a sequence that is not convertible to bool
+        state = self.plannable_env.plannable_state()
+        
+        with self.assertRaises(ValueError):
+            if state.is_done():
+                pass

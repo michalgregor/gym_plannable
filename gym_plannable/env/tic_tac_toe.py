@@ -98,7 +98,8 @@ class TicTacToeState(PlannableStateDeterministic):
         """
         Returns whether the game is over.
         """
-        return [len(self.winner) > 0 for i in range(self.num_agents)]
+        done = len(self.winner) > 0
+        return [done for i in range(self.num_agents)]
         
     def _check_done(self, x, y, agent_turn):
         # Check row x and column y.

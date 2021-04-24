@@ -145,7 +145,9 @@ class SamplePlannableState(State):
                 this asserts that there is a single turning agent and returns
                 its corresponding item.
         """
-        return self._select_who(self._is_done(), who)
+        # we wrap this in an array to make sure it is not
+        # silently convertible to a boolean value
+        return np.asarray(self._select_who(self._is_done(), who))
 
     @abc.abstractmethod
     def _observations(self):
