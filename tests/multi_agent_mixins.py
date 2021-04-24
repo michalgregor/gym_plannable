@@ -218,15 +218,20 @@ class ClientTestMixin:
     def testStartStop(self):
         pass
 
-    def testReset(self):
+    def testRun(self):
+        self.agent0_done = False
+        self.agent1_done = False
+
         def agent0():
             env = weakref.proxy(self.clients[0])
             obs = env.reset()
 
             for a in self.actions[::2]:
                 obs, rew, done, info = env.step(a)
+                if done: break
 
             self.assertTrue(done)
+            self.agent0_done = True
 
         def agent1():
             env = weakref.proxy(self.clients[1])
@@ -234,8 +239,10 @@ class ClientTestMixin:
 
             for a in self.actions[1::2]:
                 obs, rew, done, info = env.step(a)
-                
+                if done: break
+
             self.assertTrue(done)
+            self.agent1_done = True
 
         thread0 = Thread(target=weakref.proxy(agent0))
         thread1 = Thread(target=weakref.proxy(agent1))
@@ -245,3 +252,6 @@ class ClientTestMixin:
 
         thread0.join()
         thread1.join()
+
+        self.assertTrue(self.agent0_done)
+        self.assertTrue(self.agent1_done)

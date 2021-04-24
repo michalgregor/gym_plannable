@@ -1,23 +1,75 @@
 import abc
+import numbers
+import numpy as np
 from .score_tracker import ScoreTrackerTotal
 from .common import State
 from .multi_agent import MultiAgentEnv
 
 class SamplePlannableState(State):
     def __init__(self, score_tracker=None):
+        """
+        Arguments:
+            score_tracker: A ScoreTracker object that is going to track
+                           agents' scores.
+        """
         if score_tracker is None:
             self.score_tracker = ScoreTrackerTotal()
         else:
             self.score_tracker = score_tracker
 
-    @property
-    def scores(self):
-        return self.score_tracker.scores
+    def _select_who(self, seq, who):
+        """
+        Filters an input sequence that contains one item for each
+        agent in the environment.
+
+        Arguments:
+            - who ("all", "turn", "single"): If "all", this returns a list with
+              an item for each agent in the environment; if "turn", this returns
+              a list with an item for each currently turning agent; if "single"
+              this asserts that there is a single turning agent and returns
+              its corresponding item.
+        """
+        if who == "all":
+            return seq
+        elif who == "turn":
+            return [seq[a] for a in self.agent_turn]
+        elif who == "single":
+            assert len(self.agent_turn) == 1
+            return seq[self.agent_turn[0]]
+        else:
+            raise ValueError('Unknown who "{}".'.format(who))
+
+    def scores(self, who='all'):
+        """
+        Returns the scores associated with the state. A score is a measure that
+        summarizes rewards received by an agent. It can implemented in
+        different ways, e.g. as the total sum of rewards; by default, it is
+        computed using a ScoreTracker from gym_plannable.score_tracker.
+
+        Arguments:
+            - who ("all", "turn", "single"): If "all", this returns a list with
+              an item for each agent in the environment; if "turn", this returns
+              a list with an item for each currently turning agent; if "single"
+              this asserts that there is a single turning agent and returns
+              its corresponding item.
+        """
+        scores = self.score_tracker.scores
+        if isinstance(scores, numbers.Number):
+            scores = np.full(self.num_agents, scores)
+        
+        return self._select_who(scores, who)
 
     @staticmethod
     def _make_state(state):
-        state.score_tracker.update_scores(state.rewards)
+        state.score_tracker.update_scores(state.rewards())
         return state
+
+    @abc.abstractmethod
+    def _next(self, actions, *args, inplace=False, **kwargs):
+        """
+        Returns the next state. If stochastic, one random next state is sampled.
+        """
+        raise NotImplementedError()
 
     def next(self, actions, *args, inplace=False, **kwargs):
         """
@@ -33,7 +85,7 @@ class SamplePlannableState(State):
         return self._make_state(self._next(actions, *args, inplace=inplace, **kwargs))
 
     @abc.abstractmethod
-    def init(self, inplace=False):
+    def _init(self, inplace=False):
         """
         Returns an initial state.
 
@@ -43,45 +95,101 @@ class SamplePlannableState(State):
         """
         raise NotImplementedError()
 
+    def init(self, inplace=False):
+        """
+        Returns an initial state.
+
+        Arguments:
+            * inplace: If inplace is true, the state should be modified in place
+                       and self should be returned.
+        """
+        return self._init(inplace=inplace)
+
     @abc.abstractmethod
-    def legal_actions(self):
+    def _legal_actions(self):
         """
         Returns the sequence of all actions that are legal in the state for each agent.
         """
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def _next(self, actions, *args, inplace=False, **kwargs):
+    def legal_actions(self, who="all"):
         """
-        Returns the next state. If stochastic, one random next state is sampled.
+        Returns the sequence of all actions that are legal in the state for each agent.
+
+        Arguments:
+            - who ("all", "turn", "single"): If "all", this returns a list with
+              an item for each agent in the environment; if "turn", this returns
+              a list with an item for each currently turning agent; if "single"
+              this asserts that there is a single turning agent and returns
+              its corresponding item.
         """
-        raise NotImplementedError()
+        return self._select_who(self._legal_actions(), who)
 
     @abc.abstractmethod
-    def is_done(self):
+    def _is_done(self):
         """
         Returns a sequence of boolean values, indicating whether this is a
-        terminal state for each of the agents (for a single-agent environment
-        this is going to be a sequence with 1 item).
+        terminal state for each of the agents.
         """
         raise NotImplementedError()
 
+    def is_done(self, who='all'):
+        """
+        Returns a sequence of boolean values, indicating whether this is a
+        terminal state for each of the agents.
+
+        Arguments:
+            - who ("all", "turn", "single"): If "all", this returns a list with
+                an item for each agent in the environment; if "turn", this returns
+                a list with an item for each currently turning agent; if "single"
+                this asserts that there is a single turning agent and returns
+                its corresponding item.
+        """
+        return self._select_who(self._is_done(), who)
+
     @abc.abstractmethod
-    def observation(self):
+    def _observations(self):
         """
         Returns a sequence of observations associated with the state:
         one for each agent.
         """
         raise NotImplementedError()
 
-    @property
+    def observations(self, who='all'):
+        """
+        Returns a sequence of observations associated with the state:
+        one for each agent.
+
+        Arguments:
+            - who ("all", "turn", "single"): If "all", this returns a list with
+                an item for each agent in the environment; if "turn", this returns
+                a list with an item for each currently turning agent; if "single"
+                this asserts that there is a single turning agent and returns
+                its corresponding item.
+        """
+        return self._select_who(self._observations(), who)
+
     @abc.abstractmethod
-    def rewards(self):
+    def _rewards(self):
         """
         Returns a sequence containing the rewards for all agents (for a
         single-agent environment this is going to be a sequence with 1 item).
         """
         raise NotImplementedError()
+
+    def rewards(self, who='all'):
+        """
+        Returns a sequence containing the rewards for all agents (for a
+        single-agent environment this is going to be a sequence with 1 item).
+
+        Arguments:
+            - who ("all", "turn", "single"): If "all", this returns a list with
+                an item for each agent in the environment; if "turn", this returns
+                a list with an item for each currently turning agent; if "single"
+                this asserts that there is a single turning agent and returns
+                its corresponding item.
+        """
+        return self._select_who(self._rewards(), who)
 
     @property
     @abc.abstractmethod
@@ -101,6 +209,14 @@ class SamplePlannableState(State):
         raise NotImplementedError()
 
 class PlannableState(SamplePlannableState):
+    @abc.abstractmethod
+    def _all_next(self, actions, *args, **kwargs):
+        """
+        Returns a generator of (state, probability) tuples for all possible
+        next states.
+        """
+        raise NotImplementedError()
+    
     def all_next(self, actions, *args, **kwargs):
         """
         Returns a generator of (state, probability) tuples for all possible
@@ -112,23 +228,22 @@ class PlannableState(SamplePlannableState):
             for (ns, prob) in self._all_next(actions, *args, **kwargs))
 
     @abc.abstractmethod
-    def all_init(self):
+    def _all_init(self):
         """
         Returns a generator of (state, probability) tuples for all possible
         initial states.
         """
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def _all_next(self, actions, *args, **kwargs):
+    def all_init(self):
         """
         Returns a generator of (state, probability) tuples for all possible
-        next states.
+        initial states.
         """
-        raise NotImplementedError()
+        return self._all_init()
 
 class PlannableStateDeterministic(PlannableState):
-    def all_init(self):
+    def _all_init(self):
         return ((self.init(), 1.0) for i in range(1))
 
     def _all_next(self, actions, *args, **kwargs):

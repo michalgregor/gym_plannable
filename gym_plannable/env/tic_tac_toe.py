@@ -10,7 +10,7 @@ class TicTacToeState(PlannableStateDeterministic):
         self.size = size
         self.init(inplace=True)
 
-    def init(self, inplace=False):
+    def _init(self, inplace=False):
         if not inplace:
             state = deepcopy(self)
         else:
@@ -23,7 +23,7 @@ class TicTacToeState(PlannableStateDeterministic):
         state.num_empty = state.size**2
         state.winner = []
         state.winning_seq = []
-        state._rewards = np.zeros(state._num_agents)
+        state._reward_ar = np.zeros(state._num_agents)
 
         return state
 
@@ -38,22 +38,21 @@ class TicTacToeState(PlannableStateDeterministic):
     def num_agents(self):
         return self._num_agents
 
-    def observation(self):
+    def _observations(self):
         return [deepcopy(self.board)] * self.num_agents
     
-    @property
-    def rewards(self):
-        return self._rewards
+    def _rewards(self):
+        return self._reward_ar
 
     def _update_rewards(self):
         if len(self.winner) == 0 or None in self.winner:
-            self._rewards = np.zeros(self._num_agents)
+            self._reward_ar = np.zeros(self._num_agents)
         else:
-            self._rewards = np.full(self._num_agents, -1)
+            self._reward_ar = np.full(self._num_agents, -1)
             for agentid in self.winner:
-                self._rewards[agentid] = 1
+                self._reward_ar[agentid] = 1
 
-    def legal_actions(self):
+    def _legal_actions(self):
         """
         Returns the space of all actions legal at the current step for each agent.
         """
@@ -95,7 +94,7 @@ class TicTacToeState(PlannableStateDeterministic):
 
         return state
 
-    def is_done(self):
+    def _is_done(self):
         """
         Returns whether the game is over.
         """
@@ -187,7 +186,7 @@ class TicTacToeEnv(PlannableEnv):
 
     def reset(self):
         self._state = TicTacToeState(self._state.size)
-        return self._state.observation()
+        return self._state.observations()
  
     def step(self, action):
         """
@@ -195,11 +194,10 @@ class TicTacToeEnv(PlannableEnv):
         done flag and info dict.
         """
         action = self._wrap_inputs(action)
-        assert len(action) == 1 # only one agent is turning at each step
         self._state.next(action, agentid=self.agent_turn, inplace=True)
 
-        obs = self._state.observation()
-        rewards = self._state.rewards
+        obs = self._state.observations()
+        rewards = self._state.rewards()
         is_done = self._state.is_done()
         info = [{
             'winning_seq': self._state.winning_seq,

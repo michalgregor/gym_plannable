@@ -1,8 +1,12 @@
 import unittest
+from gym_plannable.multi_agent import StopServerException, multi_agent_to_single_agent
 from gym_plannable.env.tic_tac_toe import TicTacToeEnv
 from multi_agent_mixins import (ServerTestMixin, ServerDeleteTestMixin,
                                 ClientTestMixin, EnvTestMixin)
 from dummy_envs import DummyEnvTurnBased
+from threading import Thread
+import weakref
+import gc
 
 class ServerTestTicTacToe(ServerTestMixin, unittest.TestCase):
     env_constructor = TicTacToeEnv
@@ -14,7 +18,7 @@ class ServerTestTicTacToe(ServerTestMixin, unittest.TestCase):
         [2, 0]
     ]
 
-class ServerTestDummyTurn(ServerTestMixin, unittest.TestCase):
+class ServerTestDummyEnv(ServerTestMixin, unittest.TestCase):
     env_constructor = DummyEnvTurnBased
     actions = [0, 1, 2, 3, 0, 1, 2, 3]
 
@@ -49,46 +53,66 @@ class ClientTestDummyEnv(ClientTestMixin, unittest.TestCase):
 class TestTicTacToeEnv(EnvTestMixin, unittest.TestCase):
     env_constructor = TicTacToeEnv
 
-class TestDummyTurnEnv(EnvTestMixin, unittest.TestCase):
+class TestDummyEnv(EnvTestMixin, unittest.TestCase):
     env_constructor = DummyEnvTurnBased
 
+class ClientExceptionSafeTest(unittest.TestCase):
+    actions = [0, 1, 2, 3, 0, 1, 2, 3]
+    exception_at = 3
 
+    def setUp(self):
+        self.multiagent_env = DummyEnvTurnBased(exception_at=self.exception_at)
+        self.clients = multi_agent_to_single_agent(self.multiagent_env)
 
+        self.stopped = False
+        def stop_callback():
+            self.stopped = True
 
+        self.clients[0].server.stop_callback = stop_callback
 
+    def tearDown(self):
+        del self.clients
+        gc.collect()
+        self.assertTrue(self.stopped)
 
+    def testExceptionSafe(self):
+        self.agent0_done = False
+        self.agent1_done = False
 
+        def agent0():
+            with self.assertRaises(RuntimeError):
+                env = weakref.proxy(self.clients[0])
+                obs = env.reset()
 
-# class MultiAgentExceptionSafetyTest(unittest.TestCase):
-#     pass
+                for a in self.actions[::2]:
+                    obs, rew, done, info = env.step(a)
+                    if done: break
 
-# make sure that exceptions don't cause deadlocks
+                self.assertTrue(done)
 
+            self.agent0_done = True
 
+        def agent1():
+            with self.assertRaises(StopServerException):
+                env = weakref.proxy(self.clients[1])
+                obs = env.reset()
 
+                for a in self.actions[1::2]:
+                    obs, rew, done, info = env.step(a)
+                    if done: break
 
+                self.assertTrue(done)
 
+            self.agent1_done = True
 
+        thread0 = Thread(target=weakref.proxy(agent0))
+        thread1 = Thread(target=weakref.proxy(agent1))
 
-    # def testExceptionSafe(self):
-    #     def agent0():
-    #         env = weakref.proxy(self.clients[0])
-    #         obs = env.reset()
-    #         obs, rew, done, info = env.step([0, 0])
-    #         obs, rew, done, info = env.step([1, 0])
+        thread0.start()
+        thread1.start()
 
-    #     def agent1():
-    #         env = weakref.proxy(self.clients[1])
-    #         obs = env.reset()
-    #         obs, rew, done, info = env.step([0, 1])
-    #         obs, rew, done, info = env.step([1, 1])
-    #         self.assertTrue(done)
+        thread0.join()
+        thread1.join()
 
-    #     thread0 = Thread(target=weakref.proxy(agent0))
-    #     thread1 = Thread(target=weakref.proxy(agent1))
-
-    #     thread0.start()
-    #     thread1.start()
-
-    #     thread0.join()
-    #     thread1.join()
+        self.assertTrue(self.agent0_done)
+        self.assertTrue(self.agent1_done)

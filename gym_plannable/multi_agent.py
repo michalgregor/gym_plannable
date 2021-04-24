@@ -579,7 +579,13 @@ class AgentClientEnv(gym.Wrapper):
         obs_msg = self.server.outgoing_messages[self.agentid].get()
 
         if isinstance(obs_msg, ErrorMessage):
+            self.server.stop()
             raise obs_msg.msg
+        elif isinstance(obs_msg, StopServerMessage):
+            raise StopServerException("The server has stopped.")
+        elif not isinstance(obs_msg, ObservationMessage):
+            self.server.stop()
+            raise RuntimeError("The server returned: {}.".format(obs_msg))
 
         return obs_msg.observation
 
@@ -588,7 +594,13 @@ class AgentClientEnv(gym.Wrapper):
         obs_msg = self.server.outgoing_messages[self.agentid].get()
 
         if isinstance(obs_msg, ErrorMessage):
+            self.server.stop()
             raise obs_msg.msg
+        elif isinstance(obs_msg, StopServerMessage):
+            raise StopServerException("The server has stopped.")
+        elif not isinstance(obs_msg, ObservationMessage):
+            self.server.stop()
+            raise RuntimeError("The server returned: {}.".format(obs_msg))
 
         return obs_msg.totuple()
 
