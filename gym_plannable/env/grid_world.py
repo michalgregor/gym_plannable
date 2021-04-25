@@ -11,7 +11,6 @@ import textwrap
 
 from .render import MplFigEnv
 from ..plannable import PlannableEnv, PlannableState
-from ..turn_based import TurnBasedEnv, TurnBasedState
 
 def tt_parse_grid_str(gridstr):
     lines = [list(line) for line in gridstr.splitlines() if len(line.strip())]
@@ -265,10 +264,10 @@ class PositionActor(Actor, RenderObject):
     def position(self):
         return self._position
         
-    def init(self, pos=None):        
+    def init(self, pos=None):
         self._reward = 0
         if not pos is None:
-            self._position = pos
+            self._position = tuple(pos)
         else:
             self._position = random.choice(self.starting_poses)
         
@@ -295,6 +294,7 @@ class PositionActor(Actor, RenderObject):
         return [GWAction.up, GWAction.down, GWAction.left, GWAction.right]        
     
     def next(self, action, **params):
+        action = GWAction(action)
         self._reward = 0
         
         if action == GWAction.up:
@@ -384,7 +384,7 @@ class MatrixObservation(ObservationFunction):
         obs = np.dstack([obj.channel() for obj in seq])
         return obs
 
-class WorldState(TurnBasedState, PlannableState):
+class WorldState(PlannableState):
     def __init__(self,
                  grid_shape,
                  transition_sequence,
@@ -469,26 +469,27 @@ class WorldState(TurnBasedState, PlannableState):
     @property
     def agent_turn(self):
         """
-        Returns the numeric index of the agent which is going to move next.
+        Returns which agents are turning next.
         """
-        return self.actor_step
+        return [self.actor_step]
 
     def copy(self):
         return deepcopy(self)
     
-    def render(self, fig):
+    def render(self, fig, render_sequence=None):
+        render_sequence = render_sequence or self.render_sequence
         ax = fig.gca()
         ax.clear()
         
         for p in self.render_sequence:
             p.render(ax)
-            
+
         # Scale the axes, invert y.
         ax.set_aspect('equal')
         ax.autoscale_view(tight=True)
         if(ax.get_ylim()[0] < ax.get_ylim()[1]): ax.invert_yaxis()
 
-    def init(self, inplace=False):
+    def _init(self, inplace=False):
         """
         Returns an initial state.
         
@@ -512,7 +513,10 @@ class WorldState(TurnBasedState, PlannableState):
         w.done = False
         return w
     
-    def _next(self, action, inplace=False):
+    def _next(self, actions, inplace=False):
+        assert len(actions) == 1
+        action = actions[0]
+
         w = self if inplace else self.copy()
         
         while not isinstance(w._tr_obj(), Actor):
@@ -558,7 +562,7 @@ class WorldState(TurnBasedState, PlannableState):
                 except StopIteration:
                     gen_queue.pop()
     
-    def all_init(self):
+    def _all_init(self):
         """
         Returns a generator of (state, probability) tuples for all possible
         initial states.
@@ -575,16 +579,18 @@ class WorldState(TurnBasedState, PlannableState):
         
         next_gen = self._unfold(init_gen, gen_method, transition_method, stop_criterion)
         
-        for state in next_gen:
+        for state, prob in next_gen:
             state.done = False
-            yield state
+            yield state, prob
 
-    def _all_next(self, action):
+    def _all_next(self, actions):
         """
         Returns a generator of (state, probability) tuples for all possible
         next states.
         """
-        
+        assert len(actions) == 1
+        action = actions[0]
+
         # unfold until an agent is encountered
         gen_method = lambda obj: obj.all_next()
         transition_method = lambda obj, **params: obj.next(**params)
@@ -608,32 +614,32 @@ class WorldState(TurnBasedState, PlannableState):
         
         return post_agent_gen
 
-    def legal_actions(self):
+    def _legal_actions(self):
         """
         Returns the sequence of all actions that are legal in the state.
         """
-        return self.actors[self.actor_step].legal_actions()
+        return [self.actors[self.actor_step].legal_actions()]
         
-    def is_done(self):
+    def _is_done(self):
         """
         Returns whether this is a terminal state or not.
         """
-        return self.done
+        return [self.done for i in range(self.num_agents)]
 
-    @property
-    def rewards(self):
+    def _rewards(self):
         """
         Returns a sequence containing the rewards.
         """
         return np.asarray([obj.reward for obj in self.actors])
 
-    def observation(self):
+    def _observations(self):
         """
-        Returns the observation associated with the state.
+        Returns the list of observations associated with the state, one
+        for each agent.
         """        
-        return self.observation_function[self.actor_step](self)
+        return [self.observation_function[self.actor_step](self)] * self.num_agents
 
-class GridWorldEnv(PlannableEnv, TurnBasedEnv, MplFigEnv):
+class GridWorldEnv(PlannableEnv, MplFigEnv):
     def __init__(
         self,
         grid_shape,
@@ -676,32 +682,29 @@ class GridWorldEnv(PlannableEnv, TurnBasedEnv, MplFigEnv):
     
     def reset(self):
         self._state = self._state.init()
-        return self._state.observation()
+        return self._wrap_outputs(self._state.observations())
     
-    def step(self, action, agentid=None):
+    def step(self, action):
         """
         Applies the specified action and activates the state transition.
-        If agentid is specified and does not match self.agent_turn,
-        a ValueError is raised (useful as a consistency check).
 
         This returns what a single-agent step method would return except that
         instead of a single reward, there will be a list of rewards, one
-        for each agent.
+        for each agent. If num_agents == 1, a scalar reward will be returned
+        to maintain compatibility with the standard OpenAI Gym interface.
 
         Arguments:
           * action: The action to apply.
-          * agentid: The id of the agent that selected the action. If None,
-            self.agent_turn will be used instead.
-        """       
-        agentid = agentid or self._state.agent_turn
-        if agentid != self._state.agent_turn:
-            raise ValueError("It is not the agent's turn: '{}'.".format(agentid))
-        
-        self._state.next(action, inplace=True)
-        rewards = self._state.rewards
-        if len(rewards) == 1: rewards = rewards[0]
+        """
+        actions = self._wrap_inputs(action)
+        self._state.next(actions, inplace=True)
 
-        return self._state.observation(), rewards, self._state.is_done(), {}
+        obs = self._state.observations()
+        rewards = self._state.rewards()       
+        is_done = self._state.is_done()
+        info = [{}] * self.num_agents
+
+        return self._wrap_outputs(obs, rewards, is_done, info)
 
 class MazeEnv(GridWorldEnv):
     def __init__(self, grid=None, observation_function=None, **kwargs):

@@ -17,7 +17,7 @@ class SamplePlannableState(State):
         else:
             self.score_tracker = score_tracker
 
-    def _select_who(self, seq, who):
+    def _select_who(self, seq, who, make_array=False):
         """
         Filters an input sequence that contains one item for each
         agent in the environment.
@@ -30,9 +30,12 @@ class SamplePlannableState(State):
               its corresponding item.
         """
         if who == "all":
+            if make_array: seq = np.asarray(seq)
             return seq
         elif who == "turn":
-            return [seq[a] for a in self.agent_turn]
+            seq = [seq[a] for a in self.agent_turn]
+            if make_array: seq = np.asarray(seq)
+            return seq
         elif who == "single":
             assert len(self.agent_turn) == 1
             return seq[self.agent_turn[0]]
@@ -146,8 +149,8 @@ class SamplePlannableState(State):
                 its corresponding item.
         """
         # we wrap this in an array to make sure it is not
-        # silently convertible to a boolean value
-        return np.asarray(self._select_who(self._is_done(), who))
+        # silently convertible to a boolean value unless it is a scalar
+        return self._select_who(self._is_done(), who, make_array=True)
 
     @abc.abstractmethod
     def _observations(self):

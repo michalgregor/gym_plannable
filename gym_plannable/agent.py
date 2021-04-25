@@ -1,4 +1,5 @@
 from .common import ClosedEnvSignal
+from .multi_agent import StopServerException
 from threading import Thread
 import numpy as np
 import random
@@ -36,7 +37,7 @@ class BaseAgent:
                 self.steps = 0
 
                 while not done and (self.max_steps is None or
-                    self. steps < self.max_steps
+                    self.steps < self.max_steps
                 ):
                     self.steps += 1
                     state = self.env.plannable_state()
@@ -68,6 +69,9 @@ class BaseAgent:
         except ClosedEnvSignal:
             if self.verbose: print("Exited because of a closed environment.")
 
+        except StopServerException:
+            return 
+            
         except:
             # if the agent crashes irretrievably, make sure the
             # env is finished to prevent lock ups in the remaining threads
@@ -82,9 +86,15 @@ class BaseAgent:
         """
         Starts the agent in a new thread.
         """
-        thread = Thread(target=self)
-        thread.start()
-        return thread
+        self.thread = Thread(target=self)
+        self.thread.start()
+        return self.thread
+
+    def join(self, **kwargs):
+        """
+        Joins the agent's thread.
+        """
+        return self.thread.join(**kwargs)
 
 class LegalAgent(BaseAgent):
     def select_action(self, state):
