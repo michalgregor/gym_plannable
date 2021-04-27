@@ -279,3 +279,61 @@ class PlannableEnv(MultiAgentEnv):
         This function must be callable before reset().
         """
         raise NotImplementedError()
+
+class PlannableStateSingleWrapper:
+    """Wraps a PlannableState (or a SamplePlannableState) in a simplified
+       interface for environments where each turn only ever involves one agent.
+    """
+    def __init__(self, state):
+        self._state = state
+        
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError("attempted to get missing private attribute '{}'".format(name))
+        return getattr(self._state, name)
+
+    @classmethod
+    def class_name(cls):
+        return cls.__name__
+
+    def __str__(self):
+        return '<{}{}>'.format(type(self).__name__, self._state)
+
+    def __repr__(self):
+        return str(self)
+
+    def next(self, action, *args, inplace=False, **kwargs):
+        return PlannableStateSingleWrapper(
+            self._state.next([action], *args, inplace=inplace, **kwargs)
+        )
+
+    def legal_actions(self):
+        return self._state.legal_actions(who='single')
+
+    def is_done(self):
+        return self._state.is_done(who='single')
+
+    def observations(self):
+        return self._state.observations(who='single')
+
+    def rewards(self):
+        return self._state.rewards(who='single')
+    
+    def all_next(self, action, *args, **kwargs):
+        gen = (
+            (PlannableStateSingleWrapper(state), prob) for (state, prob) in
+                self._state.all_next([action], *args, **kwargs)
+        )
+        return gen
+
+    def init(self, inplace=False):
+        return PlannableStateSingleWrapper(
+            self._state.init(inplace=inplace)
+        )
+
+    def all_init(self):
+        gen = (
+            (PlannableStateSingleWrapper(state), prob)
+                for (state, prob) in self._state.all_init()
+        )
+        return gen

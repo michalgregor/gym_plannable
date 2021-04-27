@@ -1,7 +1,7 @@
 from .common import ClosedEnvSignal
 from .multi_agent import StopServerException
+from .plannable import PlannableStateSingleWrapper
 from threading import Thread
-import numpy as np
 import random
 import time
 import copy
@@ -27,6 +27,9 @@ class BaseAgent:
     def agentid(self):
         return self.env.agentid
 
+    def _get_plannable_state(self):
+        return self.env.plannable_state()
+
     def __call__(self):
         try:
             self.episode = 0
@@ -40,7 +43,7 @@ class BaseAgent:
                     self.steps < self.max_steps
                 ):
                     self.steps += 1
-                    state = self.env.plannable_state()
+                    state = self._get_plannable_state()
 
                     if self.show_times:
                         start = time.perf_counter()
@@ -96,7 +99,11 @@ class BaseAgent:
         """
         return self.thread.join(**kwargs)
 
-class LegalAgent(BaseAgent):
+class SingleBaseAgent(BaseAgent):
+    def _get_plannable_state(self):
+        return PlannableStateSingleWrapper(self.env.plannable_state())
+
+class LegalAgent(SingleBaseAgent):
     def select_action(self, state):
         legals = state.legal_actions()
         action = random.choice(legals)

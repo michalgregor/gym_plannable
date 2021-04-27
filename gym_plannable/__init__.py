@@ -4,6 +4,8 @@ VERSION = "0.1"
 
 from .common import ClosedEnvSignal
 from .multi_agent import multi_agent_to_single_agent, MultiAgentEnv
-from .plannable import PlannableEnv, PlannableState, PlannableStateDeterministic
+from .plannable import (PlannableEnv, PlannableState,
+                        PlannableStateDeterministic,
+                        PlannableStateSingleWrapper)
 from .score_tracker import ScoreTracker, ScoreTrackerTotal
-from .agent import BaseAgent, LegalAgent
+from .agent import BaseAgent, SingleBaseAgent, LegalAgent
