@@ -66,10 +66,10 @@ class BaseAgent:
                         print("agent {} interrupted; done={}".format(self.env.agentid, done))
 
                 if not self.episode_scores is None:
-                    self.episode_scores.append(copy.deepcopy(state.scores))
+                    self.episode_scores.append(copy.deepcopy(state.scores()))
 
                 if self.verbose:
-                    print("Episode {} done; scores: {}".format(self.episode, state.scores))
+                    print("Episode {} done; scores: {}".format(self.episode, state.scores()))
 
                 self.episode += 1
 
