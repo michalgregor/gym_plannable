@@ -3,7 +3,8 @@
 VERSION = "0.1"
 
 from .common import ClosedEnvSignal
-from .multi_agent import multi_agent_to_single_agent, MultiAgentEnv
+from .multi_agent import (multi_agent_to_single_agent, MultiAgentEnv,
+                          handle_error_stop, handle_error_nostop)
 from .plannable import (PlannableEnv, PlannableState,
                         PlannableStateDeterministic,
                         PlannableStateSingleWrapper)

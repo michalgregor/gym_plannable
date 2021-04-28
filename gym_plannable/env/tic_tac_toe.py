@@ -1,7 +1,9 @@
 from ..plannable import PlannableStateDeterministic, PlannableEnv
 from ..agent import BaseAgent
+from ..multi_agent import StopServerException, handle_error_nostop
 from copy import deepcopy
 import numpy as np
+import traceback
 import gym
 
 class TicTacToeState(PlannableStateDeterministic):
@@ -213,8 +215,10 @@ try:
     import uuid
 
     class TicTacToeAgentJavascript:
-        def __init__(self, env):
+        def __init__(self, env, error_traceback=False):
             self.id = uuid.uuid1().hex
+            self.error_traceback = error_traceback
+            env.error_handler = handle_error_nostop
             self.env = env
 
             register_callback(
@@ -285,11 +289,20 @@ try:
             return {'board': obs.tolist()}
 
         def step(self, action):
-            obs, reward, done, info = self.env.step(action)
-            return {'board': obs.tolist(),
-                    'reward': reward,
-                    'done': done,
-                    'info': info}
+            try:
+                obs, reward, done, info = self.env.step(action)
+                return {'board': obs.tolist(),
+                        'reward': reward,
+                        'done': done,
+                        'info': info}
+            except StopServerException as e:
+                return None
+            except BaseException as e:
+                if self.error_traceback:
+                    traceback.print_tb(e.__traceback__)
+                else:
+                    print(e)
+                return None
 
         def __del__(self):
             remove_callback('reset_' + self.id)
@@ -351,12 +364,14 @@ try:
                 
                 invoke_function('step_{{UUID_STR}}', [cellContent.cell_pos], {}).then(
                     data => {
-                        self.update_board(data['board']);
-                        self.done = data['done'];
-                        if(self.done) self.update_done(
-                            data['info']['winner'],
-                            data['info']['winning_seq']
-                        );
+                        if (data !== null) {
+                            self.update_board(data['board']);
+                            self.done = data['done'];
+                            if(self.done) self.update_done(
+                                data['info']['winner'],
+                                data['info']['winning_seq']
+                            );
+                        }
                     }
                 );
             }

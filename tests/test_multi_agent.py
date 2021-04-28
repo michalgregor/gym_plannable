@@ -2,7 +2,8 @@ import unittest
 from gym_plannable.multi_agent import StopServerException, multi_agent_to_single_agent
 from gym_plannable.env.tic_tac_toe import TicTacToeEnv
 from multi_agent_mixins import (ServerTestMixin, ServerDeleteTestMixin,
-                                ClientTestMixin, EnvTestMixin, ClientScoreTestMixin)
+                                ClientTestMixin, EnvTestMixin,
+                                ClientScoreTestMixin, IllegalActionTestMixin)
 from dummy_envs import DummyEnvTurnBased
 from threading import Thread
 import weakref
@@ -128,3 +129,10 @@ class ClientScoreTestTicTacToe(ClientScoreTestMixin, unittest.TestCase):
     ]
     
     scores = [1, -1]
+
+class IllegalActionTestTicTacToe(IllegalActionTestMixin, unittest.TestCase):
+    env_constructor = TicTacToeEnv
+
+    agent0_actions0 = [[0, 0]]
+    agent0_actions1 = [[0, 1], [0, 2]]
+    agent1_actions = [[1, 0], [1, 1], [2, 0]]

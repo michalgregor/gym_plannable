@@ -297,6 +297,12 @@ class MultiAgentServer:
         """
         return self.multi_agent_env.num_agents
         
+    def is_running(self):
+        """
+        Returns whether the server is running or not.
+        """
+        return self._thread.is_alive()
+
     def start(self):
         """
         Starts the server in a separate thread.
@@ -563,44 +569,54 @@ class MultiAgentServer:
         
     def __del__(self):
         self.stop()
-        
+
+def handle_error_stop(client, error):
+    client.server.stop()
+    raise error
+
+def handle_error_nostop(client, error):
+    raise error
+
 class AgentClientEnv(gym.Wrapper):
-    def __init__(self, server, agentid, **kwargs):
+    def __init__(self, server, agentid, error_handler=handle_error_stop, **kwargs):
         super().__init__(server.multi_agent_env, **kwargs)
         self.agentid = agentid
         self.server = server
+        self.error_handler = error_handler
 
         self.observation_space = server.multi_agent_env.observation_space[agentid]
         self.action_space = server.multi_agent_env.action_space[agentid]
         self.reward_range = server.multi_agent_env.reward_range[agentid]
 
     def reset(self):
+        if not self.server.is_running():
+            raise StopServerException("Calling reset and the multi agent server is not running.")
+
         self.server.incoming_messages.put(ResetMessage(self.agentid))
         obs_msg = self.server.outgoing_messages[self.agentid].get()
 
         if isinstance(obs_msg, ErrorMessage):
-            self.server.stop()
-            raise obs_msg.msg
+            self.error_handler(self, obs_msg.msg)
         elif isinstance(obs_msg, StopServerMessage):
             raise StopServerException("The server has stopped.")
         elif not isinstance(obs_msg, ObservationMessage):
-            self.server.stop()
-            raise RuntimeError("The server returned: {}.".format(obs_msg))
+            self.error_handler(self, RuntimeError("The server returned: {}.".format(obs_msg)))
 
         return obs_msg.observation
 
     def step(self, action):
+        if not self.server.is_running():
+            raise StopServerException("Calling step and the multi agent server is not running.")
+
         self.server.incoming_messages.put(ActionMessage(action, self.agentid))
         obs_msg = self.server.outgoing_messages[self.agentid].get()
 
         if isinstance(obs_msg, ErrorMessage):
-            self.server.stop()
-            raise obs_msg.msg
+            self.error_handler(self, obs_msg.msg)
         elif isinstance(obs_msg, StopServerMessage):
             raise StopServerException("The server has stopped.")
         elif not isinstance(obs_msg, ObservationMessage):
-            self.server.stop()
-            raise RuntimeError("The server returned: {}.".format(obs_msg))
+            self.error_handler(self, RuntimeError("The server returned: {}.".format(obs_msg)))
 
         return obs_msg.totuple()
 

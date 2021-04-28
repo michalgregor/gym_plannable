@@ -1,7 +1,7 @@
 import collections
 from gym_plannable.multi_agent import (
     ErrorMessage, MultiAgentServer, ActionMessage, ResetMessage,
-    ObservationMessage, multi_agent_to_single_agent
+    ObservationMessage, multi_agent_to_single_agent, handle_error_nostop
 )
 
 import gc
@@ -265,3 +265,55 @@ class ClientScoreTestMixin(ClientTestMixin):
             list(self.multiagent_env.plannable_state().scores()),
             list(self.scores)
         )
+
+class IllegalActionTestMixin(ClientTestMixin):
+    env_constructor = None
+    agent0_actions0 = None
+    agent0_actions1 = None
+    agent1_actions = None
+
+    def testRun(self):
+        self.agent0_done = False
+        self.agent1_done = False
+
+        def agent0():
+            env = weakref.proxy(self.clients[0])
+            env.error_handler = handle_error_nostop
+            obs = env.reset()
+
+            for a in self.agent0_actions0:
+                obs, rew, done, info = env.step(a)
+
+            with self.assertRaises(BaseException):
+                a = self.agent0_actions0[-1]
+                obs, rew, done, info = env.step(a)
+
+            for a in self.agent0_actions1:
+                obs, rew, done, info = env.step(a)
+                if done: break
+
+            self.assertTrue(done)
+            self.agent0_done = True
+
+        def agent1():
+            env = weakref.proxy(self.clients[1])
+            obs = env.reset()
+
+            for a in self.agent1_actions:
+                obs, rew, done, info = env.step(a)
+                if done: break
+
+            self.assertTrue(done)
+            self.agent1_done = True
+
+        thread0 = Thread(target=weakref.proxy(agent0))
+        thread1 = Thread(target=weakref.proxy(agent1))
+
+        thread0.start()
+        thread1.start()
+
+        thread0.join()
+        thread1.join()
+
+        self.assertTrue(self.agent0_done)
+        self.assertTrue(self.agent1_done)

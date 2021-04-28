@@ -30,6 +30,12 @@ class BaseAgent:
     def _get_plannable_state(self):
         return self.env.plannable_state()
 
+    def _handle_exception(self, e):
+        # if the agent crashes irretrievably, make sure the
+        # env is finished to prevent lock ups in the remaining threads
+        self.env.close()
+        raise e
+
     def __call__(self):
         try:
             self.episode = 0
@@ -73,13 +79,10 @@ class BaseAgent:
             if self.verbose: print("Exited because of a closed environment.")
 
         except StopServerException:
-            return 
+            return
             
-        except:
-            # if the agent crashes irretrievably, make sure the
-            # env is finished to prevent lock ups in the remaining threads
-            self.env.close()
-            raise
+        except BaseException as e:
+            self._handle_exception(e)
 
     @abc.abstractmethod
     def select_action(self, state):
