@@ -30,9 +30,13 @@ class MultiAgentEnv(gym.Env):
         """
         super().__init__(**kwargs)
         self.num_agents = num_agents
+        self.reward_range = [self.reward_range] * self.num_agents
 
-        if self.num_agents > 1:
-            self.reward_range = [self.reward_range] * self.num_agents
+    def _wrap_interface(self):
+        if self.num_agents == 1:
+            self.observation_space = self.observation_space[0]
+            self.action_space = self.action_space[0]
+            self.reward_range = self.reward_range[0]
 
     def _wrap_inputs(self, actions):
         """
@@ -584,9 +588,14 @@ class AgentClientEnv(gym.Wrapper):
         self.server = server
         self.error_handler = error_handler
 
-        self.observation_space = server.multi_agent_env.observation_space[agentid]
-        self.action_space = server.multi_agent_env.action_space[agentid]
-        self.reward_range = server.multi_agent_env.reward_range[agentid]
+        if server.multi_agent_env.num_agents == 1:
+            self.observation_space = server.multi_agent_env.observation_space
+            self.action_space = server.multi_agent_env.action_space
+            self.reward_range = server.multi_agent_env.reward_range
+        else:
+            self.observation_space = server.multi_agent_env.observation_space[agentid]
+            self.action_space = server.multi_agent_env.action_space[agentid]
+            self.reward_range = server.multi_agent_env.reward_range[agentid]
 
     def reset(self):
         if not self.server.is_running():

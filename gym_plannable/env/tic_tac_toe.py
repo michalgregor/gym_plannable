@@ -173,12 +173,7 @@ class TicTacToeEnv(PlannableEnv):
             dtype=np.int
         )] * state.num_agents
 
-        self.reward_range = [self.reward_range] * self.num_agents
-
-        if self.num_agents == 1:
-            self.observation_space = self.observation_space[0]
-            self.action_space = self.action_space[0]
-            self.reward_range = self.reward_range[0]
+        self._wrap_interface()
 
     def plannable_state(self):
         return self._state

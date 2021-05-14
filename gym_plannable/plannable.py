@@ -267,6 +267,13 @@ class SamplePlannableEnv(MultiAgentEnv):
         """
         raise NotImplementedError()
 
+    def single_plannable_state(self):
+        """
+        Returns a sample plannable state wrapped
+        in a PlannableStateSingleWrapper wrapper.
+        """
+        return PlannableStateSingleWrapper(self.plannable_state())
+
 class PlannableEnv(MultiAgentEnv):
     def __init__(self, num_agents=1, **kwargs):
         super().__init__(num_agents=num_agents, **kwargs)
@@ -279,6 +286,13 @@ class PlannableEnv(MultiAgentEnv):
         This function must be callable before reset().
         """
         raise NotImplementedError()
+
+    def single_plannable_state(self):
+        """
+        Returns a plannable state wrapped
+        in a PlannableStateSingleWrapper wrapper.
+        """
+        return PlannableStateSingleWrapper(self.plannable_state())
 
 class PlannableStateSingleWrapper:
     """Wraps a PlannableState (or a SamplePlannableState) in a simplified

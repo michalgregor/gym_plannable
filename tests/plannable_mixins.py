@@ -1,5 +1,10 @@
+import gc
 import numbers
 from gym_plannable.plannable import PlannableState
+from gym_plannable.agent import LegalAgent
+from gym_plannable.multi_agent import (
+    multi_agent_to_single_agent
+)
 
 class PlannableInterfaceTestMixin:
     env_constructor = None
@@ -81,3 +86,33 @@ class PlannableInterfaceTestMixin:
             with self.assertRaises(ValueError):
                 if is_done:
                     pass
+
+class PlannableEnvTestMixin:
+    env_constructor = None
+
+    def setUp(self):
+        self.env = self.env_constructor()
+        self.clients = multi_agent_to_single_agent(self.env)
+
+        self.stopped = False
+        def stop_callback():
+            self.stopped = True
+
+        self.clients[0].server.stop_callback = stop_callback
+
+    def tearDown(self):
+        del self.clients
+        gc.collect()
+        self.assertTrue(self.stopped)
+
+    def testStartStop(self):
+        pass
+
+    def testRun(self):
+        agents = [LegalAgent(env, num_episodes=1, max_steps=5) for env in self.clients]
+
+        for a in agents:
+            a.start()
+
+        for a in agents:
+            a.join()
