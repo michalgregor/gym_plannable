@@ -302,10 +302,44 @@ class PositionActor(Actor, RenderObject):
         if self.done:
             return []
         else:
-            return [int(GWAction.up),
-                    int(GWAction.down),
-                    int(GWAction.left),
-                    int(GWAction.right)]   
+            legals = []
+            if self.walls_name is None:
+                if not self._position[0] == 0:
+                    legals.append(int(GWAction.up))
+                
+                if self._position[0] < self.grid_shape[0] - 1:
+                    legals.append(int(GWAction.down))
+
+                if not self._position[1] == 0:
+                    legals.append(int(GWAction.left))
+
+                if self._position[1] < self.grid_shape[1] - 1:
+                    legals.append(int(GWAction.right))
+
+            else:
+                walls = getattr(self.world, self.walls_name)
+
+                if not self._position[0] == 0:
+                    newpos = (self._position[0]-1, self._position[1])
+                    if not walls.occupies(newpos):
+                        legals.append(int(GWAction.up))
+                
+                if self._position[0] < self.grid_shape[0] - 1:
+                    newpos = (self._position[0]+1, self._position[1])
+                    if not walls.occupies(newpos):
+                        legals.append(int(GWAction.down))
+
+                if not self._position[1] == 0:
+                    newpos = (self._position[0], self._position[1]-1)
+                    if not walls.occupies(newpos):
+                        legals.append(int(GWAction.left))
+
+                if self._position[1] < self.grid_shape[1] - 1:
+                    newpos = (self._position[0], self._position[1]+1)
+                    if not walls.occupies(newpos):
+                        legals.append(int(GWAction.right))
+
+            return legals
     
     def next(self, action, **params):
         action = GWAction(action)
