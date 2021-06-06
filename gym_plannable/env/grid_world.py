@@ -3,7 +3,7 @@ import gym
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
-from enum import Enum
+from enum import IntEnum
 import random
 import collections
 from copy import deepcopy
@@ -232,7 +232,7 @@ class GoalDrape(TransitionObject, DrapeObject):
     def all_next(self):
         return (({}, 1.0) for i in range(1))
 
-class GWAction(Enum):
+class GWAction(IntEnum):
     up = 0
     down = 1
     left = 2
@@ -302,7 +302,10 @@ class PositionActor(Actor, RenderObject):
         if self.done:
             return []
         else:
-            return [GWAction.up, GWAction.down, GWAction.left, GWAction.right]   
+            return [int(GWAction.up),
+                    int(GWAction.down),
+                    int(GWAction.left),
+                    int(GWAction.right)]   
     
     def next(self, action, **params):
         action = GWAction(action)
