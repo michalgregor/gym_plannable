@@ -28,19 +28,25 @@ class MplFigEnv(gym.Env):
             canvas.draw_idle()
         canvas.start_event_loop(delay)
 
+    def update_display(self, delay=None):
+        delay = delay or self.delay
+
+        if self.display_handle is None:
+            plt.show(block=False)
+            self._draw_pause(self.render_fig, delay / 1000)
+        else:
+            self.display_handle.update(self.render_fig)
+            time.sleep(delay / 1000)
+
     def render(self, mode='human', close=False,
-               fig=None, ax=None, **kwargs):
+               fig=None, ax=None, update_display=True,
+               **kwargs):
         if fig is None:
             self._render(self.render_fig, mode='human', close=False,
                          ax=ax, **kwargs)
 
-            if self.display_inline:
-                if self.display_handle is None:
-                    plt.show(block=False)
-                    self._draw_pause(self.render_fig, self.delay / 1000)
-                else:
-                    self.display_handle.update(self.render_fig)
-                    time.sleep(self.delay / 1000)
+            if self.display_inline and update_display:
+                self.update_display()
         else:
             self._render(fig, mode='human', close=False,
                          ax=ax, **kwargs)
