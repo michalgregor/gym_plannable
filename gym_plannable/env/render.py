@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time
 
 class MplFigEnv(gym.Env):
-    def __init__(self, figsize=None, delay=50, dpi=None,
+    def __init__(self, figsize=None, delay=10, dpi=None,
                  notebook=True, display_inline=True, **kwargs):
         super().__init__(**kwargs)
         self.display_handle = None
