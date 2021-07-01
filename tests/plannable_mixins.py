@@ -12,6 +12,7 @@ class PlannableInterfaceTestMixin:
 
     def setUp(self):
         self.plannable_env = self.env_constructor()
+        self.plannable_env.reset()
 
     def tearDown(self):
         del self.plannable_env

@@ -1,5 +1,4 @@
 from ..plannable import PlannableStateDeterministic, PlannableEnv
-from ..agent import BaseAgent
 from ..multi_agent import StopServerException, handle_error_nostop
 from copy import deepcopy
 import numpy as np
