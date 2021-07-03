@@ -4,7 +4,10 @@ class ClosedEnvSignal(Exception):
     pass
 
 class State:
-    pass
+    def __init__(self, observation_space, action_space, reward_range):
+        self.observation_space = observation_space
+        self.action_space = action_space
+        self.reward_range = reward_range
 
 def ensure_iterable(obj):
     """

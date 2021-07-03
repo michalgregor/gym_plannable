@@ -1,13 +1,19 @@
 from ..plannable import PlannableStateDeterministic, PlannableEnv
-from ..multi_agent import StopServerException, handle_error_nostop
+from ..multi_agent import StopServerException, handle_error_nostop, EnvInterface2SingleMixin
 from copy import deepcopy
 import numpy as np
 import traceback
 import gym
 
 class TicTacToeState(PlannableStateDeterministic):
-    def __init__(self, size=3, score_tracker=None, **kwargs):
-        super().__init__(score_tracker=score_tracker, **kwargs)
+    def __init__(self, 
+        observation_space, action_space, reward_range,
+        size=3, score_tracker=None, **kwargs
+    ):
+        super().__init__(
+            observation_space, action_space, reward_range,
+            score_tracker=score_tracker, **kwargs
+        )
         self.size = size
         self.init(inplace=True)
 
@@ -151,28 +157,32 @@ class TicTacToeState(PlannableStateDeterministic):
             self.winner = [None]
             return
     
-class TicTacToeEnv(PlannableEnv):
+class TicTacToeEnv(EnvInterface2SingleMixin, PlannableEnv):
     def __init__(self, size=3, **kwargs):
         """
         The constructor; the board has dimensions size x size.
         """
-        state = TicTacToeState(size)
-        super().__init__(num_agents=state.num_agents, **kwargs)
-        self._state = state
-
+        num_agents = 2
+        super().__init__(num_agents=num_agents, **kwargs)
+        
         self.observation_space = [gym.spaces.Box(
             low=np.full((size, size), -1, dtype=np.int),
-            high=np.full((size, size), self.num_agents-1, dtype=np.int),
+            high=np.full((size, size), num_agents-1, dtype=np.int),
             dtype=np.int
-        )] * state.num_agents
+        )] * num_agents
 
         self.action_space = [gym.spaces.Box(
             low=np.asarray((0, 0), dtype=np.int),
             high=np.asarray((size-1, size-1), dtype=np.int),
             dtype=np.int
-        )] * state.num_agents
+        )] * num_agents
 
-        self._wrap_interface()
+        self._state = TicTacToeState(
+            self.observation_space,
+            self.action_space,
+            self.reward_range,
+            size=size
+        )
 
     def plannable_state(self):
         return self._state
@@ -182,7 +192,13 @@ class TicTacToeEnv(PlannableEnv):
         return self._state.agent_turn
 
     def reset(self):
-        self._state = TicTacToeState(self._state.size)
+        self._state = TicTacToeState(
+            self.observation_space,
+            self.action_space,
+            self.reward_range,
+            size=self._state.size
+        )
+        
         return self._state.observations()
  
     def step(self, action):

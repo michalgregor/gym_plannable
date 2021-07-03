@@ -6,12 +6,18 @@ from .common import State
 from .multi_agent import MultiAgentEnv
 
 class SamplePlannableState(State):
-    def __init__(self, score_tracker=None):
+    def __init__(self, observation_space, action_space,
+        reward_range, score_tracker=None):
         """
         Arguments:
+            action_space
+            observation_space
+            reward_range
             score_tracker: A ScoreTracker object that is going to track
                            agents' scores.
         """
+        super().__init__(observation_space, action_space, reward_range)
+
         if score_tracker is None:
             self.score_tracker = ScoreTrackerTotal()
         else:
@@ -263,7 +269,7 @@ class SamplePlannableEnv(MultiAgentEnv):
         """
         Returns the environment's current state as SamplePlannableState.
 
-        This function must be callable before reset().
+        This function must be callable even before reset().
         """
         raise NotImplementedError()
 
@@ -283,7 +289,7 @@ class PlannableEnv(MultiAgentEnv):
         """
         Returns the environment's current state as PlannableState.
 
-        This function must be callable before reset().
+        This function must be callable even before reset().
         """
         raise NotImplementedError()
 

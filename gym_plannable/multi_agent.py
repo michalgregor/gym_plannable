@@ -6,6 +6,15 @@ import weakref
 import gym
 import abc
 
+class EnvInterface2SingleMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.num_agents == 1:
+            self.observation_space = self.observation_space[0]
+            self.action_space = self.action_space[0]
+            self.reward_range = self.reward_range[0]
+
 class MultiAgentEnv(gym.Env):
     def __init__(self, num_agents, **kwargs):
         """
@@ -31,12 +40,6 @@ class MultiAgentEnv(gym.Env):
         super().__init__(**kwargs)
         self.num_agents = num_agents
         self.reward_range = [self.reward_range] * self.num_agents
-
-    def _wrap_interface(self):
-        if self.num_agents == 1:
-            self.observation_space = self.observation_space[0]
-            self.action_space = self.action_space[0]
-            self.reward_range = self.reward_range[0]
 
     def _wrap_inputs(self, actions):
         """

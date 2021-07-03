@@ -11,13 +11,14 @@ import textwrap
 
 from .render import MplFigEnv
 from ..plannable import PlannableEnv, PlannableState
+from ..multi_agent import EnvInterface2SingleMixin
 
 def tt_parse_grid_str(gridstr):
     lines = [list(line) for line in gridstr.splitlines() if len(line.strip())]
     return np.array(lines, dtype=np.unicode_)
 
 class WorldObject:
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         self.name = name
         self.world = None
     
@@ -69,9 +70,9 @@ class TransitionObject(WorldObject):
         """
 
 class Actor(WorldObject):
-    """
-    Defines an OpenAI Gym action_space as an attribute.
-    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.done = False
     
     @abc.abstractmethod
     def init(self, **params):
@@ -450,7 +451,6 @@ class WorldState(PlannableState):
         * render_sequence: A sequence of WorldObject objects in the
                            order in which they are to be rendered.
         """
-        super().__init__(score_tracker=score_tracker, **kwargs)
         self.transition_sequence = transition_sequence
         self.render_sequence = render_sequence
         self.grid_shape = grid_shape
@@ -481,7 +481,28 @@ class WorldState(PlannableState):
                 raise ValueError("The number of observation functions must equal the number of actors.")
         else:
             self.observation_function = [self.observation_function] * len(self.actors)
-    
+
+        self.observation_space = [
+            obs_func.observation_space
+                for obs_func in self.observation_function
+        ]
+
+        self.action_space = [
+            actor.action_space
+                for actor in self.actors
+        ]
+
+        self.reward_range = [
+            (-np.inf, np.inf) for _ in self.actors
+        ]
+
+        super().__init__(
+            self.observation_space, self.action_space, self.reward_range,
+            score_tracker=score_tracker, **kwargs
+        )
+
+        self.init(inplace=True)
+
     def _tr_obj(self):
         """
         Returns the current transition object. The sequence wraps
@@ -715,7 +736,7 @@ class WorldState(PlannableState):
         """        
         return [np.array(self.observation_function[self.actor_step](self))] * self.num_agents
 
-class GridWorldEnv(PlannableEnv, MplFigEnv):
+class GridWorldEnv(EnvInterface2SingleMixin, PlannableEnv, MplFigEnv):
     def __init__(
         self,
         grid_shape,
@@ -730,20 +751,12 @@ class GridWorldEnv(PlannableEnv, MplFigEnv):
             render_sequence,
             observation_function=observation_function
         )
+
+        self.observation_space = self._state.observation_space
+        self.action_space = self._state.action_space
+        self.reward_range = self._state.reward_range
         
         super().__init__(num_agents=self._state.num_agents, **kwargs)
-        
-        self.observation_space = [
-            obs_func.observation_space 
-                for obs_func in self._state.observation_function
-        ]
-
-        self.action_space = [
-            actor.action_space
-                for actor in self._state.actors
-        ]
-
-        self._wrap_interface()
 
     @property
     def agent_turn(self):
@@ -763,7 +776,7 @@ class GridWorldEnv(PlannableEnv, MplFigEnv):
         return self._state
     
     def reset(self):
-        self._state = self._state.init()
+        self._state.init(inplace=True)
         return self._wrap_outputs(self._state.observations())
     
     def step(self, action):
