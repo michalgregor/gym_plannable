@@ -327,6 +327,18 @@ class PlannableStateSingleWrapper:
             self._state.next([action], *args, inplace=inplace, **kwargs)
         )
 
+    @property
+    def observation_space(self):
+        return self._state.observation_space[0]
+
+    @property
+    def action_space(self):
+        return self._state.action_space[0]
+
+    @property
+    def reward_range(self):
+        return self._state.reward_range[0]
+
     def legal_actions(self):
         return self._state.legal_actions(who='single')
 
