@@ -6,32 +6,83 @@ import weakref
 import gym
 import abc
 
-class EnvInterface2SingleMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class Multi2SingleWrapper(gym.Env):
+    """
+    Wraps a multi-agent MultiAgentEnv environment with num_agents == 1 as
+    a standard single-agent Gym environment.
+    """
+    def __init__(self, env):
+        if not isinstance(env, MultiAgentEnv) or env.num_agents != 1:
+            raise ValueError("A MultiAgentEnv object with num_agents == 1 was expected.")
+        
+        self.env = env
+        self.observation_space = self.env.observation_spaces[0]
+        self.action_space = self.env.action_spaces[0]
+        self.reward_range = self.env.reward_ranges[0]
 
-        if self.num_agents == 1:
-            self.observation_space = self.observation_space[0]
-            self.action_space = self.action_space[0]
-            self.reward_range = self.reward_range[0]
+    def reset(self):
+        return self.env.reset()[0]
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step([action])
+        return obs[0], reward[0], done[0], info[0]   
+        
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError("attempted to get missing private attribute '{}'".format(name))
+        return getattr(self.env, name)
+
+    @classmethod
+    def class_name(cls):
+        return cls.__name__
+
+    def __str__(self):
+        return '<{}{}>'.format(type(self).__name__, self._state)
+
+    def __repr__(self):
+        return str(self)
+
+    def render(self, mode='human', **kwargs):
+        return self.env.render(mode, **kwargs)
+
+    def close(self):
+        return self.env.close()
+
+    def seed(self, seed=None):
+        return self.env.seed(seed)
+
+    def compute_reward(self, achieved_goal, desired_goal, info):
+        return self.env.compute_reward(achieved_goal, desired_goal, info)
+
+    def __str__(self):
+        return '<{}{}>'.format(type(self).__name__, self.env)
+
+    def __repr__(self):
+        return str(self)
+
+    @property
+    def unwrapped(self):
+        return self.env.unwrapped
 
 class MultiAgentEnv(gym.Env):
     def __init__(self, num_agents, **kwargs):
         """
-        A base class for multiplayer environments.
+        A base class for multiagent environments.
 
-        Unlike the base gym.Env, action_space, observation_space
-        and reward_range should all be sequences: there should be an entry
-        for each agent. This is unless num_agents == 1 in which case the
-        interface is to be kept compatible with the standard gym.Env
-        interface.
+        Unlike gym.Env environments, instead of action_space, observation_space
+        and reward_range, the environment has:
+        * action_spaces;
+        * observation_spaces; and
+        * reward_ranges,
+        which are all sequences with an entry for each agent.
 
-        The same holds for values returned from reset() and step(): reset()
+        Similarly, reset() and step() also return sequences: i.e. reset()
         returns a sequence of observations, one for each agent and step()
-        returns several such sequences for observations, for rewards, for
-        done and for info. Again, if num_agents == 1 the interface is to
-        be kept compatible with the standard gym.Env interface. Similarly,
-        actions are presented to step() as a sequence unless num_agents == 1.
+        returns several such sequences for observations, rewards, done and info.
+        
+        Finally, actions are presented to step() as a sequence: environments
+        can be either turn-based or use simultaneous actions, but a sequence
+        of actions is used in either case.
 
         You can use multi_agent_to_single_agent() to turn a MultiAgentEnv into
         several connected single-agent environments with the standard Gym
@@ -39,39 +90,7 @@ class MultiAgentEnv(gym.Env):
         """
         super().__init__(**kwargs)
         self.num_agents = num_agents
-        self.reward_range = [self.reward_range] * self.num_agents
-
-    def _wrap_inputs(self, actions):
-        """
-        An auxiliary function for multiagent environments that wraps the input
-        in a list if num_agents == 1. After filtering actions through this
-        function, there should always be a sequence of actions, i.e. the rest
-        of the environment can work the same for both single-agent and
-        multi-agent environments.
-        """
-        if self.num_agents == 1:
-            return [actions]
-        else:
-            return actions
-
-    def _wrap_outputs(self, obs, reward=None, done=None, info=None):
-        """
-        An auxiliary function: In multi-agent environments, agents are supposed
-        to return a sequence of observations, rewards, done flags and info
-        dictionaries, one for each agent. In single-agent environments these
-        should all be scalar. This utility function will unwrap all these from
-        sequences to scalars if num_agents == 1.
-        """
-        if reward is None or done is None or info is None:
-            if self.num_agents == 1:
-                return obs[0]
-            else:
-                return obs
-        else:
-            if self.num_agents == 1:
-                return obs[0], reward[0], done[0], info[0]
-            else:
-                return obs, reward, done, info
+        self.reward_ranges = [self.reward_range] * self.num_agents
 
     @property
     @abc.abstractmethod
@@ -83,40 +102,35 @@ class MultiAgentEnv(gym.Env):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def step(self, action):
+    def step(self, actions):
         """
-        Applies the specified action(s) and activates the state transition.
+        Applies the specified actions and activates the state transition.
 
         This returns what a single-agent step method would return except that:
-            * If num_agents > 1:
-                * a sequence of num_agents observations will be returned;
-                * a sequence of num_agents rewards will be returned;
-                * a sequence of done flags will be returned;
-                * a sequence of info dictionaries will be returned;
+        * a sequence of num_agents observations will be returned;
+        * a sequence of num_agents rewards will be returned;
+        * a sequence of num_agents done flags will be returned;
+        * a sequence of num_agents info dictionaries will be returned;
         
-        Also, if num_agents > 1, action is a sequence of actions, even if
-        only a single agent is turning at each step.
-
-        If num_agents == 1, the interface remains compatible with the standard
-        OpenAI Gym interface.
-
+        Also, actions is a sequence (even if only a single agent is turning
+        at each step).
+                
         Arguments:
-          * action: The action(s) to apply. If num_agents == 1, this is a single
-                    action. If num_agents > 1, action is a sequence of actions
-                    in the order that corresponds to agent_turn.
+          * actions: The action(s) to apply; the order corresponds to the
+                order of agents in agent_turn.
         """
         raise NotImplementedError()
 
-    def checked_step(self, action, agentids):
+    def checked_step(self, actions, agentids):
         """
-        Does the same as self.step(action), but first checks that
+        Does the same as self.step(actions), but first checks that
         agentids (i.e. the sequence of ids corresponding to the agents that
         selected the actions) matches agent_turn.
         """
         if list(agentids) != list(self._state.agent_turn):
             raise ValueError("It is not the agents' turn: '{}'.".format(agentids))
 
-        return self.step(action)
+        return self.step(actions)
 
 class ResetMessage:
     def __init__(self, agentid):
@@ -236,14 +250,6 @@ class ActionCollector:
         self._collected = 0
         self.interrupted = False
         
-def _ensure_seq_num_agents(obj, num_agents):
-    """
-    If num_agents == 1, wraps the scalar object obj as a single-item list;
-    otherwise just returns obj as is.
-    """
-    if num_agents == 1: return [obj]
-    else: return obj
-
 class MultiAgentServer:
     def __init__(self, multi_agent_env, stop_callback=None):
         """
@@ -397,7 +403,6 @@ class MultiAgentServer:
         """
         action_dict = self._action_collector.get_actions()
         actions = list(action_dict.values())
-        if self.num_agents == 1: actions = actions[0]
         
         if self._action_collector.interrupted:
             # make sure everybody knows that the episode ended
@@ -447,11 +452,8 @@ class MultiAgentServer:
                 return
                 
             self._action_collector.reset(self.multi_agent_env.agent_turn)
-
-            self._obs = obs = _ensure_seq_num_agents(obs, self.num_agents)
-            rew = _ensure_seq_num_agents(rew, self.num_agents)
-            self._info = info = _ensure_seq_num_agents(info, self.num_agents)
-            done = _ensure_seq_num_agents(done, self.num_agents)
+            self._obs = obs
+            self._info = info
 
             # signal all newly done agents
             newly_done = np.where(~self._reset_expected & done)[0]
@@ -509,8 +511,7 @@ class MultiAgentServer:
         """
         Resets the underlying environment and do the necessary book-keeping.
         """        
-        obs = self.multi_agent_env.reset()
-        self._obs = obs = _ensure_seq_num_agents(obs, self.num_agents)
+        self._obs = self.multi_agent_env.reset()
         self._info = None
         self._action_collector.reset(self.multi_agent_env.agent_turn)
         self._reset_expected[:] = True
@@ -590,15 +591,10 @@ class AgentClientEnv(gym.Wrapper):
         self.agentid = agentid
         self.server = server
         self.error_handler = error_handler
-
-        if server.multi_agent_env.num_agents == 1:
-            self.observation_space = server.multi_agent_env.observation_space
-            self.action_space = server.multi_agent_env.action_space
-            self.reward_range = server.multi_agent_env.reward_range
-        else:
-            self.observation_space = server.multi_agent_env.observation_space[agentid]
-            self.action_space = server.multi_agent_env.action_space[agentid]
-            self.reward_range = server.multi_agent_env.reward_range[agentid]
+        
+        self.observation_space = server.multi_agent_env.observation_spaces[agentid]
+        self.action_space = server.multi_agent_env.action_spaces[agentid]
+        self.reward_range = server.multi_agent_env.reward_ranges[agentid]
 
     def reset(self):
         if not self.server.is_running():

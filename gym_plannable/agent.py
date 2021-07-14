@@ -59,7 +59,7 @@ class BaseAgent:
                     if self.show_times:
                         end = time.perf_counter()
                         print("Action selected in {} s.".format(end-start))
-                    
+
                     _, _, done, info = self.env.step(action)
 
                     if self.verbose and info.get('interrupted'):

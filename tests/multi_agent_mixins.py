@@ -18,56 +18,43 @@ class EnvTestMixin:
         self.env.close()
 
     def test_attributes(self):
-        if self.env.num_agents != 1:
-            self.assertEqual(
-                len(self.env.action_space), self.env.num_agents,
-                    msg="len(action_space) != num_agents"
-            )
+        self.assertEqual(
+            len(self.env.action_spaces), self.env.num_agents,
+                msg="len(action_spaces) != num_agents"
+        )
 
-            self.assertEqual(
-                len(self.env.observation_space), self.env.num_agents,
-                    msg="len(observation_space) != num_agents"
-            )
+        self.assertEqual(
+            len(self.env.observation_spaces), self.env.num_agents,
+                msg="len(observation_spaces) != num_agents"
+        )
 
-            self.assertEqual(
-                len(self.env.reward_range), self.env.num_agents,
-                    msg="len(reward_range) != num_agents"
-            )
+        self.assertEqual(
+            len(self.env.reward_ranges), self.env.num_agents,
+                msg="len(reward_ranges) != num_agents"
+        )
 
     def test_reset(self):
         obs = self.env.reset()
-
-        if self.env.num_agents != 1:
-            self.assertEqual(len(obs), self.env.num_agents)
-
-        if self.env.num_agents != 1:
-            for io, o in enumerate(obs):
-                self.assertTrue(self.env.observation_space[io].contains(o))
-        else:
-            self.assertTrue(self.env.observation_space.contains(obs))
+        self.assertEqual(len(obs), self.env.num_agents)
+        for io, o in enumerate(obs):
+            self.assertTrue(self.env.observation_spaces[io].contains(o))
 
         agent_turn = self.env.agent_turn
         self.assertIsInstance(agent_turn, collections.Sequence)
 
     def test_transition(self):
         self.env.reset()
-        agent_turn = self.env.agent_turn
+        agent_turn = self.env.agent_turn       
 
-        if self.env.num_agents != 1:
-            actions = [self.env.action_space[agentid].sample()
-                    for agentid in agent_turn]
-        else:
-            actions = self.env.action_space.sample()
+        actions = [self.env.action_spaces[agentid].sample()
+                for agentid in agent_turn]
         
         obs, rewards, done, info = self.env.step(actions)
 
-        if self.env.num_agents != 1:
-            self.assertEqual(len(obs), self.env.num_agents)
+        self.assertEqual(len(obs), self.env.num_agents)
 
-            for io, o in enumerate(obs):
-                self.assertTrue(self.env.observation_space[io].contains(o))
-        else:
-            self.assertTrue(self.env.observation_space.contains(obs))
+        for io, o in enumerate(obs):
+            self.assertTrue(self.env.observation_spaces[io].contains(o))
 
 class ServerTestMixin:
     timeout = 1

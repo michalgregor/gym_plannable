@@ -54,18 +54,18 @@ class PlannableInterfaceTestMixin:
         )
 
         self.assertEqual(
-            len(state.observation_space), state.num_agents,
-            msg="The state's observation_space needs to be a sequence with an item for each agent."
+            len(state.observation_spaces), state.num_agents,
+            msg="The state's observation_spaces needs to be a sequence with an item for each agent."
         )
 
         self.assertEqual(
-            len(state.action_space), state.num_agents,
-            msg="The state's action_space needs to be a sequence with an item for each agent."
+            len(state.action_spaces), state.num_agents,
+            msg="The state's action_spaces needs to be a sequence with an item for each agent."
         )
 
         self.assertEqual(
-            len(state.reward_range), state.num_agents,
-            msg="The state's reward_range needs to be a sequence with an item for each agent."
+            len(state.reward_ranges), state.num_agents,
+            msg="The state's reward_ranges needs to be a sequence with an item for each agent."
         )
 
     def testInit(self):
@@ -102,7 +102,7 @@ class PlannableInterfaceTestMixin:
                 if is_done:
                     pass
 
-class PlannableEnvTestMixin:
+class MultiAgentPlannableEnvTestMixin:
     env_constructor = None
 
     def setUp(self):

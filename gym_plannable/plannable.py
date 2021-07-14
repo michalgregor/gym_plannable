@@ -3,11 +3,10 @@ import numbers
 import numpy as np
 from .score_tracker import ScoreTrackerTotal
 from .common import State
-from .multi_agent import MultiAgentEnv
 
 class SamplePlannableState(State):
-    def __init__(self, observation_space, action_space,
-        reward_range, score_tracker=None):
+    def __init__(self, observation_spaces, action_spaces,
+        reward_ranges, score_tracker=None):
         """
         Arguments:
             action_space
@@ -16,7 +15,7 @@ class SamplePlannableState(State):
             score_tracker: A ScoreTracker object that is going to track
                            agents' scores.
         """
-        super().__init__(observation_space, action_space, reward_range)
+        super().__init__(observation_spaces, action_spaces, reward_ranges)
 
         if score_tracker is None:
             self.score_tracker = ScoreTrackerTotal()
@@ -260,10 +259,7 @@ class PlannableStateDeterministic(PlannableState):
     def _all_next(self, actions, *args, **kwargs):
         return ((self.next(actions, *args, **kwargs), 1.0) for i in range(1))
 
-class SamplePlannableEnv(MultiAgentEnv):
-    def __init__(self, num_agents=1, **kwargs):
-        super().__init__(num_agents=num_agents, **kwargs)
-
+class SamplePlannableEnv:
     @abc.abstractmethod
     def plannable_state(self) -> SamplePlannableState:
         """
@@ -280,10 +276,7 @@ class SamplePlannableEnv(MultiAgentEnv):
         """
         return PlannableStateSingleWrapper(self.plannable_state())
 
-class PlannableEnv(MultiAgentEnv):
-    def __init__(self, num_agents=1, **kwargs):
-        super().__init__(num_agents=num_agents, **kwargs)
-
+class PlannableEnv:
     @abc.abstractmethod
     def plannable_state(self) -> PlannableState:
         """
@@ -329,15 +322,15 @@ class PlannableStateSingleWrapper:
 
     @property
     def observation_space(self):
-        return self._state.observation_space[0]
+        return self._state.observation_spaces[0]
 
     @property
     def action_space(self):
-        return self._state.action_space[0]
+        return self._state.action_spaces[0]
 
     @property
     def reward_range(self):
-        return self._state.reward_range[0]
+        return self._state.reward_ranges[0]
 
     def legal_actions(self):
         return self._state.legal_actions(who='single')

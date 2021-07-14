@@ -8,13 +8,8 @@ class DummyEnvTurnBased(MultiAgentEnv):
                  exception_at=None, **kwargs):
         super().__init__(num_agents=num_agents, **kwargs)
 
-        if self.num_agents == 1:
-            self.observation_space = gym.spaces.Discrete(num_steps)
-            self.action_space = gym.spaces.Discrete(num_actions)
-        else:
-            self.observation_space = [gym.spaces.Discrete(num_steps)] * self.num_agents
-            self.action_space = [gym.spaces.Discrete(num_actions)] * self.num_agents
-
+        self.observation_spaces = [gym.spaces.Discrete(num_steps)] * self.num_agents
+        self.action_spaces = [gym.spaces.Discrete(num_actions)] * self.num_agents
         self.exception_at = exception_at
         self.num_steps = num_steps
 
@@ -24,17 +19,15 @@ class DummyEnvTurnBased(MultiAgentEnv):
 
     def reset(self):
         self._step = 0
-        obs = [self._step % self.num_agents for i in range(self.num_agents)]
-        return self._wrap_outputs(obs)
+        return [self._step % self.num_agents for i in range(self.num_agents)]
  
-    def step(self, action):
+    def step(self, actions):
         # there is always exactly 1 agent turning
-        action = self._wrap_inputs(action)
-        assert len(action) == 1
-        action = action[0]
+        assert len(actions) == 1
+        action = actions[0]
         agentid = self.agent_turn[0]
         
-        if not self.action_space[agentid].contains(action):
+        if not self.action_spaces[agentid].contains(action):
             raise ValueError("Invalid action: '{}'.".format(action))
 
         if not self.exception_at is None and self.exception_at >= self._step:
@@ -52,4 +45,4 @@ class DummyEnvTurnBased(MultiAgentEnv):
 
         self._step += 1
 
-        return self._wrap_outputs(obs, rewards, done, info)
+        return obs, rewards, done, info

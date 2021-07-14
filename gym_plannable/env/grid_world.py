@@ -11,7 +11,7 @@ import textwrap
 
 from .render import MplFigEnv
 from ..plannable import PlannableEnv, PlannableState
-from ..multi_agent import EnvInterface2SingleMixin
+from ..multi_agent import MultiAgentEnv, Multi2SingleWrapper 
 
 def tt_parse_grid_str(gridstr):
     lines = [list(line) for line in gridstr.splitlines() if len(line.strip())]
@@ -482,22 +482,22 @@ class WorldState(PlannableState):
         else:
             self.observation_function = [self.observation_function] * len(self.actors)
 
-        self.observation_space = [
+        self.observation_spaces = [
             obs_func.observation_space
                 for obs_func in self.observation_function
         ]
 
-        self.action_space = [
+        self.action_spaces = [
             actor.action_space
                 for actor in self.actors
         ]
 
-        self.reward_range = [
+        self.reward_ranges = [
             (-np.inf, np.inf) for _ in self.actors
         ]
 
         super().__init__(
-            self.observation_space, self.action_space, self.reward_range,
+            self.observation_spaces, self.action_spaces, self.reward_ranges,
             score_tracker=score_tracker, **kwargs
         )
 
@@ -736,7 +736,7 @@ class WorldState(PlannableState):
         """        
         return [np.array(self.observation_function[self.actor_step](self))] * self.num_agents
 
-class GridWorldEnv(EnvInterface2SingleMixin, PlannableEnv, MplFigEnv):
+class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
     def __init__(
         self,
         grid_shape,
@@ -752,9 +752,9 @@ class GridWorldEnv(EnvInterface2SingleMixin, PlannableEnv, MplFigEnv):
             observation_function=observation_function
         )
 
-        self.observation_space = self._state.observation_space
-        self.action_space = self._state.action_space
-        self.reward_range = self._state.reward_range
+        self.observation_spaces = self._state.observation_spaces
+        self.action_spaces = self._state.action_spaces
+        self.reward_ranges = self._state.reward_ranges
         
         super().__init__(num_agents=self._state.num_agents, **kwargs)
 
@@ -777,21 +777,9 @@ class GridWorldEnv(EnvInterface2SingleMixin, PlannableEnv, MplFigEnv):
     
     def reset(self):
         self._state.init(inplace=True)
-        return self._wrap_outputs(self._state.observations())
+        return self._state.observations()
     
-    def step(self, action):
-        """
-        Applies the specified action and activates the state transition.
-
-        This returns what a single-agent step method would return except that
-        instead of a single reward, there will be a list of rewards, one
-        for each agent. If num_agents == 1, a scalar reward will be returned
-        to maintain compatibility with the standard OpenAI Gym interface.
-
-        Arguments:
-          * action: The action to apply.
-        """
-        actions = self._wrap_inputs(action)
+    def step(self, actions):
         self._state.next(actions, inplace=True)
 
         obs = self._state.observations()
@@ -799,9 +787,9 @@ class GridWorldEnv(EnvInterface2SingleMixin, PlannableEnv, MplFigEnv):
         is_done = self._state.is_done()
         info = [{}] * self.num_agents
 
-        return self._wrap_outputs(obs, rewards, is_done, info)
+        return obs, rewards, is_done, info
 
-class MazeEnv(GridWorldEnv):
+class MazeEnvMA(GridWorldEnv):
     def __init__(self, grid=None, observation_function=None, **kwargs):
         if grid is None:
             grid = textwrap.dedent(
@@ -850,3 +838,8 @@ class MazeEnv(GridWorldEnv):
             observation_function=observation_function,
             **kwargs
         )
+
+class MazeEnv(Multi2SingleWrapper):
+    def __init__(self, grid=None, observation_function=None, **kwargs):
+        env = MazeEnvMA(grid=grid, observation_function=observation_function, **kwargs)
+        super().__init__(env)
