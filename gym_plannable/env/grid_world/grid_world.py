@@ -222,6 +222,9 @@ class GoalDrape(TransitionObject, DrapeObject):
                  goal_reward=0, **kwargs):
         super().__init__(name, grid, symbol, **kwargs)
         self.player_names = player_names or []
+        if isinstance(self.player_names, str):
+            self.player_names = [self.player_names]
+            
         self.goal_reward = goal_reward
             
     def init(self, **params):
@@ -240,6 +243,22 @@ class GoalDrape(TransitionObject, DrapeObject):
     def all_next(self):
         return (({}, 1.0) for i in range(1))
 
+class ConstRewardObject(TransitionObject):
+    def __init__(self, name, player_names=None, reward=-1, **kwargs):
+        super().__init__(name, **kwargs)
+        self.reward = reward
+        self.player_names = player_names or []
+        if isinstance(self.player_names, str):
+            self.player_names = [self.player_names]
+        
+    def next(self, **params):
+        for pn in self.player_names:
+            p = getattr(self.world, pn)
+            p.reward += self.reward
+
+    def all_next(self):
+        return (({}, 1.0) for i in range(1))
+    
 class GWAction(IntEnum):
     up = 0
     down = 1

@@ -16,3 +16,4 @@ from .grid_world import (
 )
 
 from .maze import MazeEnv, MazeEnvMA
+from .cliff_walker import CliffWalkerEnv, CliffWalkerEnvMA
