@@ -1,19 +1,22 @@
 import abc
 import gym
-import numpy as np
 import itertools
+import numpy as np
 import matplotlib.pyplot as plt
-from enum import IntEnum
-import random
-import collections
 from copy import deepcopy
+from enum import IntEnum
+import collections
 import textwrap
+import random
 
-from .render import MplFigEnv
-from ..plannable import PlannableEnv, PlannableState
-from ..multi_agent import MultiAgentEnv, Multi2SingleWrapper 
+from ..render import MplFigEnv
+from ...plannable import PlannableEnv, PlannableState
+from ...multi_agent import MultiAgentEnv
 
-def tt_parse_grid_str(gridstr):
+def parse_grid_str(gridstr, dedent=True):
+    if dedent:
+        gridstr = textwrap.dedent(gridstr)
+
     lines = [list(line) for line in gridstr.splitlines() if len(line.strip())]
     return np.array(lines, dtype=np.unicode_)
 
@@ -39,6 +42,10 @@ class WorldObject:
         pass
     
 class TransitionObject(WorldObject):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.done = True
+
     @abc.abstractmethod
     def init(self, **params):
         """
@@ -614,7 +621,7 @@ class WorldState(PlannableState):
         w._tr_obj().next(action)
         w._next_tr_obj()
 
-        while not np.all(w.is_done()):
+        while not np.all(w._is_done_all()):
             obj = w._tr_obj()
 
             if isinstance(obj, Actor):
@@ -716,6 +723,9 @@ class WorldState(PlannableState):
         Returns the sequence of all actions that are legal in the state.
         """
         return [self.actors[self.actor_step].legal_actions()]
+
+    def _is_done_all(self):
+        return [obj.done for obj in self.transition_sequence]
         
     def _is_done(self):
         """
@@ -789,57 +799,3 @@ class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
 
         return obs, rewards, is_done, info
 
-class MazeEnvMA(GridWorldEnv):
-    def __init__(self, grid=None, observation_function=None, **kwargs):
-        if grid is None:
-            grid = textwrap.dedent(
-            """
-            XXXX00000G
-            000X000000
-            000X000XXX
-            000X000000
-            000X000000
-            0000000000
-            0000X00000
-            0000XXX00X
-            0000X00000
-            S000X00000
-            """)
-        
-        grid_ar = tt_parse_grid_str(grid)
-                
-        goal = GoalDrape("goal", grid_ar, 'G', facecolor=None,
-                         label='G', player_names=["player"],
-                         goal_reward=100)
-        player = PositionActor("player", grid_ar, 'S', 'walls',
-                               facecolor='blue', edgecolor=None)
-        
-        transition_sequence = [
-            player,
-            goal
-        ]
-        
-        render_sequence = [
-            BackgroundObject("background", grid_ar),
-            DrapeObject("walls", grid_ar, 'X', facecolor='gray'),
-            DrapeObject("starts", grid_ar, 'S', facecolor=None, label='S'),
-            goal,
-            player
-        ]
-        
-        if observation_function is None:
-            observation_function = [PosObservation(grid_ar.shape,
-                                                   pos_agent_name="player")]
-        
-        super().__init__(
-            grid_ar.shape,
-            transition_sequence=transition_sequence,
-            render_sequence=render_sequence,
-            observation_function=observation_function,
-            **kwargs
-        )
-
-class MazeEnv(Multi2SingleWrapper):
-    def __init__(self, grid=None, observation_function=None, **kwargs):
-        env = MazeEnvMA(grid=grid, observation_function=observation_function, **kwargs)
-        super().__init__(env)
