@@ -224,7 +224,7 @@ class GoalDrape(TransitionObject, DrapeObject):
         self.player_names = player_names or []
         if isinstance(self.player_names, str):
             self.player_names = [self.player_names]
-            
+
         self.goal_reward = goal_reward
             
     def init(self, **params):
@@ -250,7 +250,13 @@ class ConstRewardObject(TransitionObject):
         self.player_names = player_names or []
         if isinstance(self.player_names, str):
             self.player_names = [self.player_names]
-        
+
+    def init(self, **params):
+        pass
+    
+    def all_init(self):
+        return (({}, 1.0) for i in range(1))
+
     def next(self, **params):
         for pn in self.player_names:
             p = getattr(self.world, pn)
@@ -258,15 +264,17 @@ class ConstRewardObject(TransitionObject):
 
     def all_next(self):
         return (({}, 1.0) for i in range(1))
-    
-class GWAction(IntEnum):
-    up = 0
-    down = 1
-    left = 2
-    right = 3
+
+NSWEActionSpec = (
+    (-1, 0), # up
+    (1, 0), # down
+    (0, -1), # left
+    (0, 1), # right
+)
 
 class PositionActor(Actor, RenderObject):
-    def __init__(self, name, grid, symbol, walls_name=None, **kwargs):
+    def __init__(self, name, grid, symbol, walls_name=None,
+                 action_spec=None, **kwargs):
         render_kwargs = dict(patch_func=RenderObject._circle)
         render_kwargs.update(**kwargs)
         super().__init__(name, grid.shape, **render_kwargs)
@@ -278,7 +286,8 @@ class PositionActor(Actor, RenderObject):
         
         self.walls_name = walls_name
         self._reward = 0
-        self.action_space = gym.spaces.Discrete(4)
+        self.action_spec = action_spec or NSWEActionSpec
+        self.action_space = gym.spaces.Discrete(len(self.action_spec))
         
     @property
     def reward(self):
@@ -331,59 +340,31 @@ class PositionActor(Actor, RenderObject):
         else:
             legals = []
             if self.walls_name is None:
-                if not self._position[0] == 0:
-                    legals.append(int(GWAction.up))
-                
-                if self._position[0] < self.grid_shape[0] - 1:
-                    legals.append(int(GWAction.down))
-
-                if not self._position[1] == 0:
-                    legals.append(int(GWAction.left))
-
-                if self._position[1] < self.grid_shape[1] - 1:
-                    legals.append(int(GWAction.right))
-
+                for ia, a in enumerate(self.action_spec):
+                    newpos = np.asarray(self._position) + np.asarray(a)
+                    if (
+                        (newpos > 0).all() and
+                        (newpos < (np.asarray(self.grid_shape) - 1)).all()
+                    ):
+                        legals.append(ia)
             else:
                 walls = getattr(self.world, self.walls_name)
-
-                if not self._position[0] == 0:
-                    newpos = (self._position[0]-1, self._position[1])
-                    if not walls.occupies(newpos):
-                        legals.append(int(GWAction.up))
-                
-                if self._position[0] < self.grid_shape[0] - 1:
-                    newpos = (self._position[0]+1, self._position[1])
-                    if not walls.occupies(newpos):
-                        legals.append(int(GWAction.down))
-
-                if not self._position[1] == 0:
-                    newpos = (self._position[0], self._position[1]-1)
-                    if not walls.occupies(newpos):
-                        legals.append(int(GWAction.left))
-
-                if self._position[1] < self.grid_shape[1] - 1:
-                    newpos = (self._position[0], self._position[1]+1)
-                    if not walls.occupies(newpos):
-                        legals.append(int(GWAction.right))
+                for ia, a in enumerate(self.action_spec):
+                    newpos = np.asarray(self._position) + np.asarray(a)
+                    if (
+                        (newpos >= 0).all() and
+                        (newpos < np.asarray(self.grid_shape)).all()
+                    ) and not walls.occupies(newpos):
+                        legals.append(ia)
 
             return legals
     
     def next(self, action, **params):
-        action = GWAction(action)
+        a = self.action_spec[action]
         self._reward = 0
-        
-        if action == GWAction.up:
-            newpos = (self._position[0]-1, self._position[1])
-        elif action == GWAction.down:
-            newpos = (self._position[0]+1, self._position[1])
-        elif action == GWAction.left:
-            newpos = (self._position[0], self._position[1]-1)
-        elif action == GWAction.right:
-            newpos = (self._position[0], self._position[1]+1)
-        elif self.done and action is None:
-            return
-        else:
-            raise ValueError("Unknown action '{}'.".format(action))
+
+        if self.done and action is None: return
+        newpos = (self._position[0] + a[0], self._position[1] + a[1])
     
         newpos = (
             max(min(newpos[0], self.grid_shape[0]-1), 0),
@@ -403,19 +384,10 @@ class StochasticActor(PositionActor):
     def next(self, action, rand_act=None):
         self._reward = 0
         
-        rand_act = np.random.randint(0, 4) if rand_act is None else rand_act
+        rand_act = np.random.randint(0, len(self.action_spec)) if rand_act is None else rand_act
+        a = self.action_spec[rand_act]
+        newpos = (self._position[0]+a[0], self._position[1]+a[1])
         
-        if rand_act == 0:
-            newpos = (self._position[0]-1, self._position[1])
-        elif rand_act == 1:
-            newpos = (self._position[0]+1, self._position[1])
-        elif rand_act == 2:
-            newpos = (self._position[0], self._position[1]-1)
-        elif rand_act == 3:
-            newpos = (self._position[0], self._position[1]+1)
-        else:
-            raise ValueError("Unknown action '{}'.".format(rand_act))
-    
         newpos = (
             max(min(newpos[0], self.grid_shape[0]-1), 0),
             max(min(newpos[1], self.grid_shape[1]-1), 0)
@@ -803,7 +775,15 @@ class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
     
     def plannable_state(self):
         return self._state
-    
+
+    @property
+    def transition_sequence(self):
+        return self._state.transition_sequence
+
+    @property
+    def render_sequence(self):
+        return self._state.render_sequence
+
     def reset(self):
         self._state.init(inplace=True)
         return self._state.observations()

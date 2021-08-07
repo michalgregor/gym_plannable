@@ -6,7 +6,7 @@ from .grid_world import (
     BackgroundObject,
     DrapeObject,
     GoalDrape,
-    GWAction,
+    NSWEActionSpec,
     PositionActor,
     ObservationFunction,
     PosObservation,
