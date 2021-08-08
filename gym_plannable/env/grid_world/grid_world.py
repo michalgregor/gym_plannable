@@ -286,6 +286,7 @@ class PositionActor(Actor, RenderObject):
         
         self.walls_name = walls_name
         self._reward = 0
+
         self.action_spec = action_spec or NSWEActionSpec
         self.action_space = gym.spaces.Discrete(len(self.action_spec))
         

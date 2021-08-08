@@ -37,7 +37,8 @@ class MazeEnvMA(GridWorldEnv):
         player = PositionActor("player", grid_ar, 'S', 'walls', 
                                action_spec=action_spec,
                                facecolor='blue', edgecolor=None)
-        
+        self.action_spec = player.action_spec
+
         transition_sequence = [
             player,
             punishment,
