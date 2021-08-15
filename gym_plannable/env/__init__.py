@@ -1,2 +1,2 @@
-from .tic_tac_toe import TicTacToeAgentJavascript, TicTacToeEnv, TicTacToeState
+from .tic_tac_toe import *
 from .grid_world import *
