@@ -545,8 +545,9 @@ class WorldState(PlannableState):
     def copy(self):
         return deepcopy(self)
     
-    def render(self, fig=None, render_sequence=None, ax=None):
+    def render(self, fig=None, render_sequence=None, ax=None, skip=None):
         render_sequence = render_sequence or self.render_sequence
+        skip = skip or set()
 
         if ax is None:
             if fig is None:
@@ -556,7 +557,8 @@ class WorldState(PlannableState):
         ax.clear()
         
         for p in render_sequence:
-            p.render(ax)
+            if not p.name in skip:
+                p.render(ax)
 
         # Scale the axes, invert y.
         ax.set_aspect('equal')
@@ -769,10 +771,11 @@ class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
     
     def _render(
         self, fig, mode='human', close=False,
-        ax=None, render_sequence=None
+        ax=None, render_sequence=None, skip=None
     ):
         return self._state.render(fig=fig, ax=ax,
-                                  render_sequence=render_sequence)
+                                  render_sequence=render_sequence,
+                                  skip=skip)
     
     def plannable_state(self):
         return self._state
