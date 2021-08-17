@@ -30,7 +30,7 @@ class MazeEnvMA(GridWorldEnv):
         goal = GoalDrape("goal", grid_ar, 'G', facecolor=None,
                          label='G', player_names=["player"],
                          goal_reward=goal_reward)
-        cliff = GoalDrape("cliff", grid_ar, 'C', facecolor=None,
+        cliff = GoalDrape("cliff", grid_ar, 'C', facecolor='lightgray',
                          label='C', player_names=["player"],
                          goal_reward=cliff_punishment)
         punishment = ConstRewardObject("punishment", "player", reward=move_punishment)
