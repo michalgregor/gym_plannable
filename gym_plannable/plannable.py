@@ -338,10 +338,10 @@ class PlannableStateSingleWrapper:
     def is_done(self):
         return self._state.is_done(who='single')
 
-    def observations(self):
+    def observation(self):
         return self._state.observations(who='single')
 
-    def rewards(self):
+    def reward(self):
         return self._state.rewards(who='single')
     
     def all_next(self, action, *args, **kwargs):
