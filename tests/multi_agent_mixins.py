@@ -37,7 +37,10 @@ class EnvTestMixin:
         obs = self.env.reset()
         self.assertEqual(len(obs), self.env.num_agents)
         for io, o in enumerate(obs):
-            self.assertTrue(self.env.observation_spaces[io].contains(o))
+            self.assertTrue(
+                self.env.observation_spaces[io].contains(o),
+                "Returned observation is not contained in the observation space."
+            )
 
         agent_turn = self.env.agent_turn
         self.assertIsInstance(agent_turn, collections.Sequence)

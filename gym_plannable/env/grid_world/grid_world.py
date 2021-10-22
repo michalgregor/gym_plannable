@@ -417,7 +417,7 @@ class PosObservation(ObservationFunction):
         )       
         
     def __call__(self, state):
-        return getattr(state, self.pos_agent_name).position
+        return np.array(getattr(state, self.pos_agent_name).position, dtype=np.int)
         
 class MatrixObservation(ObservationFunction):
     def __init__(self, grid_shape, num_layers, observation_sequence=None):
@@ -431,7 +431,7 @@ class MatrixObservation(ObservationFunction):
         
     def __call__(self, state):
         seq = self.observation_sequence or state.render_sequence
-        obs = np.dstack([obj.channel() for obj in seq])
+        obs = np.dstack([obj.channel() for obj in seq]).astype(np.int)
         return obs
 
 class WorldState(PlannableState):
