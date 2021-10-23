@@ -1,7 +1,8 @@
+import multiprocessing
 import numpy as np
 import collections
 import threading
-from multiprocessing import Queue, Lock, Event
+from multiprocessing import Queue, Lock, Event, Manager
 from queue import Empty
 import weakref
 import gym
@@ -27,6 +28,7 @@ def handle_error_nostop(client, error):
 
 class ClientServerInterface:
     def __init__(self,
+        manager,
         num_agents,
         observation_spaces,
         action_spaces,
@@ -36,11 +38,11 @@ class ClientServerInterface:
         self.action_spaces = action_spaces
         self.reward_ranges = reward_ranges
 
-        self.outgoing_messages = [Queue() for _ in range(num_agents)]
-        self.incoming_messages = Queue()
-        self.started_event = Event()
-        self.finished_event = Event()
-        self.stop_lock = Lock()
+        self.outgoing_messages = [manager.Queue() for _ in range(num_agents)]
+        self.incoming_messages = manager.Queue()
+        self.started_event = manager.Event()
+        self.finished_event = manager.Event()
+        self.stop_lock = manager.Lock()
 
     def _stop(self):
         if self.started_event.is_set() and not self.finished_event.is_set():
@@ -63,7 +65,7 @@ class ClientServerInterface:
         - wait: If True, block until the server thread terminates.
         """
         # if false, another thread is already stopping the server
-        if self.stop_lock.acquire(block=False):
+        if self.stop_lock.acquire(blocking=False):
             try:
                 self._stop()
             except BaseException as e:
@@ -84,8 +86,10 @@ class MultiAgentServer:
                            interface) that is to be managed by the server.
         """
         self.multi_agent_env = multi_agent_env
+        self.manager = Manager()
+        
         self.csi = ClientServerInterface(
-            self.num_agents, multi_agent_env.observation_spaces,
+            self.manager, self.num_agents, multi_agent_env.observation_spaces,
             multi_agent_env.action_spaces, multi_agent_env.reward_ranges
         )
 
@@ -360,7 +364,12 @@ class MultiAgentServer:
         raise StopServerException()
         
     def __del__(self):
-        self.stop()
+        try:
+            self.stop()
+        except FileNotFoundError:
+            pass
+        except multiprocessing.managers.RemoteError:
+            pass
 
 class AgentClientEnv(gym.Wrapper):
     def __init__(self, env_proxy,
