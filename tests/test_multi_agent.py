@@ -63,18 +63,13 @@ class ClientExceptionSafeTest(unittest.TestCase):
 
     def setUp(self):
         self.multiagent_env = DummyEnvTurnBased(exception_at=self.exception_at)
-        self.clients = multi_agent_to_single_agent(self.multiagent_env)
-
-        self.stopped = False
-        def stop_callback():
-            self.stopped = True
-
-        self.clients[0].server.stop_callback = stop_callback
+        self.clients, server = multi_agent_to_single_agent(self.multiagent_env, return_server=True)
+        self.finished_event = server.csi.finished_event
 
     def tearDown(self):
         del self.clients
         gc.collect()
-        self.assertTrue(self.stopped)
+        self.assertTrue(self.finished_event.is_set())
 
     def testExceptionSafe(self):
         self.agent0_done = False

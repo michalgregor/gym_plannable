@@ -107,18 +107,13 @@ class MultiAgentPlannableEnvTestMixin:
 
     def setUp(self):
         self.env = self.env_constructor()
-        self.clients = multi_agent_to_single_agent(self.env)
-
-        self.stopped = False
-        def stop_callback():
-            self.stopped = True
-
-        self.clients[0].server.stop_callback = stop_callback
+        self.clients, server = multi_agent_to_single_agent(self.env, return_server=True)
+        self.finished_event = server.csi.finished_event
 
     def tearDown(self):
         del self.clients
         gc.collect()
-        self.assertTrue(self.stopped)
+        self.assertTrue(self.finished_event.is_set())
 
     def testStartStop(self):
         pass

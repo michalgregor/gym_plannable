@@ -67,116 +67,114 @@ class ServerTestMixin:
     def setUp(self):
         self.multiagent_env = self.env_constructor()
         self.server = MultiAgentServer(self.multiagent_env)
+        self.assertFalse(self.server.csi.finished_event.is_set())
         self.server.start()
-        self.assertTrue(self.server._thread.is_alive())
+        self.assertTrue(self.server.is_running())
+        self.assertTrue(self.server.csi.started_event.is_set())
 
     def tearDown(self):
         self.server.stop()
+        self.assertTrue(self.server.csi.finished_event.is_set())
         self.multiagent_env.close()
-        self.assertFalse(self.server._thread.is_alive())
 
     def test_start_and_stop(self):
         pass
     
     def test_reset(self):
-        self.server.incoming_messages.put(ResetMessage(0))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
     def test_action_before_reset(self):
-        self.server.incoming_messages.put(ActionMessage(self.actions[0], 0))
-        msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[0], 0))
+        msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
 
         self.assertIsInstance(msg, ErrorMessage)
         self.assertIsInstance(msg.msg, RuntimeError)
 
     def test_transition(self):
-        self.server.incoming_messages.put(ResetMessage(0))
-        self.server.incoming_messages.put(ResetMessage(1))
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        self.server.csi.incoming_messages.put(ResetMessage(1))
 
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ActionMessage(self.actions[0], 0))
-        obs_msg = self.server.outgoing_messages[1].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[0], 0))
+        obs_msg = self.server.csi.outgoing_messages[1].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ActionMessage(self.actions[1], 1))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[1], 1))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
     def test_transition2(self):
-        self.server.incoming_messages.put(ResetMessage(0))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
-        self.server.incoming_messages.put(ActionMessage(self.actions[0], 0))
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[0], 0))
 
-        self.server.incoming_messages.put(ResetMessage(1))
-        obs_msg = self.server.outgoing_messages[1].get(timeout=self.timeout)
-        self.assertIsInstance(obs_msg, ObservationMessage)
-
-        self.server.incoming_messages.put(ActionMessage(self.actions[1], 1))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(1))
+        obs_msg = self.server.csi.outgoing_messages[1].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-    def test_double_start(self):
-        with self.assertRaises(RuntimeError):
-            self.server.start()
-       
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[1], 1))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
+        self.assertIsInstance(obs_msg, ObservationMessage)
+
     def test_consecutive_resets(self):        
-        self.server.incoming_messages.put(ResetMessage(0))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ResetMessage(1))
+        self.server.csi.incoming_messages.put(ResetMessage(1))
 
-        self.server.incoming_messages.put(ResetMessage(0))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ActionMessage(self.actions[0], 0))
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[0], 0))
         # collect reset message
-        obs_msg = self.server.outgoing_messages[1].get(timeout=self.timeout)
+        obs_msg = self.server.csi.outgoing_messages[1].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ActionMessage(self.actions[1], 1))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[1], 1))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
     def test_consecutive_resets2(self):
-        self.server.incoming_messages.put(ResetMessage(0))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ResetMessage(1))
+        self.server.csi.incoming_messages.put(ResetMessage(1))
 
-        self.server.incoming_messages.put(ResetMessage(0))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ActionMessage(self.actions[0], 0))
-        obs_msg = self.server.outgoing_messages[1].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[0], 0))
+        obs_msg = self.server.csi.outgoing_messages[1].get(timeout=self.timeout)
 
-        self.server.incoming_messages.put(ActionMessage(self.actions[1], 1))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[1], 1))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
     def test_consecutive_resets3(self):
-        self.server.incoming_messages.put(ResetMessage(0))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ResetMessage(0))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(0))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ResetMessage(1))
-        self.server.incoming_messages.put(ActionMessage(self.actions[0], 0))
-        obs_msg = self.server.outgoing_messages[1].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ResetMessage(1))
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[0], 0))
+        obs_msg = self.server.csi.outgoing_messages[1].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
-        self.server.incoming_messages.put(ActionMessage(self.actions[1], 1))
-        obs_msg = self.server.outgoing_messages[0].get(timeout=self.timeout)
+        self.server.csi.incoming_messages.put(ActionMessage(self.actions[1], 1))
+        obs_msg = self.server.csi.outgoing_messages[0].get(timeout=self.timeout)
         self.assertIsInstance(obs_msg, ObservationMessage)
 
 class ServerDeleteTestMixin:
@@ -187,17 +185,14 @@ class ServerDeleteTestMixin:
         self.multiagent_env = self.env_constructor()
         self.server = MultiAgentServer(self.multiagent_env)
         self.server.start()
-        self.assertTrue(self.server._thread.is_alive())
+        self.assertTrue(self.server.is_running())
 
     def test_del_stop(self):
-        self.stopped = False
-        def stop_callback():
-            self.stopped = True
-
-        self.server.stop_callback = stop_callback
+        finished_event = self.server.csi.finished_event
+        self.server.stop()
         del self.server
         gc.collect()
-        self.assertTrue(self.stopped)
+        self.assertTrue(finished_event.is_set())
 
 class ClientTestMixin:
     env_constructor = None
@@ -205,18 +200,15 @@ class ClientTestMixin:
 
     def setUp(self):
         self.multiagent_env = self.env_constructor()
-        self.clients = multi_agent_to_single_agent(self.multiagent_env)
-
-        self.stopped = False
-        def stop_callback():
-            self.stopped = True
-
-        self.clients[0].server.stop_callback = stop_callback
-
+        self.clients, server = multi_agent_to_single_agent(
+            self.multiagent_env, return_server=True
+        )
+        self.finished_event = server.csi.finished_event
+        
     def tearDown(self):
         del self.clients
         gc.collect()
-        self.assertTrue(self.stopped)
+        self.assertTrue(self.finished_event.is_set())
 
     def testStartStop(self):
         pass
