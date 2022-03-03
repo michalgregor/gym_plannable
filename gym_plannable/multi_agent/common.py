@@ -2,7 +2,17 @@ import collections
 from queue import Empty
 from multiprocessing.managers import RemoteError
 from multiprocessing import Manager
-manager = Manager()
+
+class ManagerSingleton:
+    def __init__(self):
+        self.manager = None
+
+    def __call__(self):
+        if self.manager is None:
+            self.manager = Manager()
+        return self.manager
+
+manager_singleton = ManagerSingleton()
 
 class ClientServerInterface:
     def __init__(self,
@@ -15,6 +25,7 @@ class ClientServerInterface:
         self.action_spaces = action_spaces
         self.reward_ranges = reward_ranges
 
+        manager = manager_singleton()
         self.outgoing_messages = [manager.Queue() for _ in range(num_agents)]
         self.incoming_messages = manager.Queue()
         self.started_event = manager.Event()
