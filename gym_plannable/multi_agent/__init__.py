@@ -1,4 +1,4 @@
-from .async_server import *
+from .multi_agent_server import *
 from .client import *
 from .common import *
 from .interface import *

@@ -1,14 +1,15 @@
 from queue import Empty
 import threading
 from .common import (
-    ClientServerInterface, ActionCollector, ActionMessage, ResetMessage,
-    ErrorMessage, StopServerMessage, StopServerException, ObservationMessage,
-    ErrorException
+    ClientServerInterface, ActionMessage, ResetMessage, ErrorMessage,
+    StopServerMessage, StopServerException, ObservationMessage, ErrorException,
+    ResetAction
 )
+import collections
 import numpy as np
 
 class MultiAgentServer:
-    def __init__(self, multi_agent_env):
+    def __init__(self, multi_agent_env, asynchronous=True):
         """
         A server that manages a multi agent environment, to which several
         clients may connect and present single-agent views of the environment
@@ -17,6 +18,12 @@ class MultiAgentServer:
         Arguments:
         - multi_agent_env: The multi agent environment (with a MultiAgentEnv
                            interface) that is to be managed by the server.
+        - asynchronous: If False, this makes the server synchronous: agents
+                       whose turn it is currently not, receive None instead
+                       of the usual return value from both reset and step;
+                       and they are expected to query again at every step,
+                       supplying None as an action. This way no environment
+                       blocks for several time steps.
         """
         self.multi_agent_env = multi_agent_env
         
@@ -32,7 +39,10 @@ class MultiAgentServer:
         self._obs = None
         self._info = None
 
-        self._action_collector = ActionCollector()        
+        self._action_collector = ActionCollector(
+            self.multi_agent_env.num_agents, asynchronous=asynchronous
+        )
+
         self._message_handlers = {
             ActionMessage: self._handle_action,
             ResetMessage: self._handle_reset,
@@ -173,6 +183,7 @@ class MultiAgentServer:
                 
             self._action_collector.reset(self.multi_agent_env.agent_turn)
             self._obs = obs
+            self._filter_obs()
             self._info = info
 
             # signal all newly done agents
@@ -232,10 +243,15 @@ class MultiAgentServer:
         Resets the underlying environment and do the necessary book-keeping.
         """        
         self._obs = self.multi_agent_env.reset()
+        self._filter_obs()
         self._info = None
         self._action_collector.reset(self.multi_agent_env.agent_turn)
         self._reset_expected[:] = True
         np.asarray(self.obs_msg_buffer)[:] = None
+
+    def _filter_obs(self):
+        for agentid in self._action_collector.env_agent_turn:
+            self._obs[agentid] = None
 
     def _send_buffer_msg(self, agentid):
         self.csi.outgoing_messages[agentid].put_nowait(
@@ -297,3 +313,98 @@ class MultiAgentServer:
         
     def __del__(self):
         self.stop()
+
+class ActionCollector:
+    def __init__(self, num_agents, agentids=[], asynchronous=True):
+        """
+        A class that, given a list of agents' ids, manages collecting
+        their actions (or requests to interrupt the episode).
+
+        Arguments:
+        - agentids: A list containing ids of agents whose turn it is and their
+                    actions are to be collected.
+        - asynchronous: If False, all agents are treated as if it were their turn.
+        """
+        self.num_agents = num_agents
+        self._asynchronous = asynchronous
+        self.env_agent_turn = None
+        self.reset(agentids)
+        
+    @property
+    def all_collected(self):
+        """
+        Returns True if all agents' actions have been collected.
+        """
+        return self._collected == len(self._actions)
+
+    @property
+    def agent_turn(self):
+        """
+        Returns a view of agent ids for agents whose turn it currently is.
+        """
+        return self._actions.keys()
+    
+    def collect(self, msg):
+        """
+        Registers an agent's action (given an ActionMessage) or an agent's
+        request for the episode to be interrupted (given a ResetMessage).
+
+        Arguments:
+        - msg: An ActionMessage or a ResetMessage to collect.
+
+        Raises:
+        - A ValueError if the agent's action has already been collected;
+        - A ValueError if it is currently not the agent's turn.
+        - A TypeError if msg is neither an ActionMessage, nor a ResetMessage.
+        """
+        agentid = msg.agentid
+        
+        try:
+            if not self._actions[agentid] is None:
+                raise ValueError("An action has already been collected for agent {}.".format(agentid))
+        except KeyError:
+            raise ValueError("It is currently not agent {}'s turn.".format(agentid))
+            
+        if isinstance(msg, ActionMessage):
+            if not self._asynchronous and not agentid in self.env_agent_turn:
+                raise ValueError("It is currently not agent {}'s turn: None was expected instead of an action.".format(agentid))
+            self._actions[agentid] = msg.action
+        elif isinstance(msg, ResetMessage):
+            self._actions[agentid] = ResetAction()
+            self.interrupted = True
+        else:
+            raise TypeError("Unexpected message type '{}'.".format(type(msg)))
+        
+        self._collected += 1
+    
+    def get_actions(self):
+        """
+        Returns a view of the collected actions in the order the agentids
+        were specified.
+
+        Raises:
+        - A RuntimeError if all actions have not yet been collected.
+        """
+        if not self.all_collected:
+            raise RuntimeError("Actions not yet collected for all agentids.")
+        else:
+            return self._actions
+        
+    def reset(self, agentids=[]):
+        """
+        Resets action collection by removing any already collected actions
+        and setting up for collecting new actions from the specified agents.
+
+        Arguments:
+        - agentids: A list containing ids of agents whose turn it is and their
+                    actions are to be collected.
+        """
+        if self._asynchronous:
+            self._actions = collections.OrderedDict.fromkeys(agentids)
+            self.env_agent_turn = self._actions.keys()
+        else:
+            self._actions = collections.OrderedDict.fromkeys(range(self.num_agents))
+            self.env_agent_turn = set(agentids)
+        
+        self._collected = 0
+        self.interrupted = False
