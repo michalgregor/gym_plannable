@@ -180,12 +180,12 @@ class MultiAgentServer:
                     
                 self._action_collector.reset(self._action_collector.agent_turn)
                 return
-                
-            self._action_collector.reset(self.multi_agent_env.agent_turn)
+
             self._obs = obs
             self._filter_obs()
-            self._info = info
-
+            self._info = info    
+            self._action_collector.reset(self.multi_agent_env.agent_turn)
+            
             # signal all newly done agents
             newly_done = np.where(~self._reset_expected & done)[0]
 
@@ -243,15 +243,18 @@ class MultiAgentServer:
         Resets the underlying environment and do the necessary book-keeping.
         """        
         self._obs = self.multi_agent_env.reset()
-        self._filter_obs()
         self._info = None
         self._action_collector.reset(self.multi_agent_env.agent_turn)
+        self._filter_obs()
         self._reset_expected[:] = True
         np.asarray(self.obs_msg_buffer)[:] = None
 
     def _filter_obs(self):
+        orig_obs = self._obs
+        self._obs = [None for _ in range(self.num_agents)]
+
         for agentid in self._action_collector.env_agent_turn:
-            self._obs[agentid] = None
+            self._obs[agentid] = orig_obs[agentid]
 
     def _send_buffer_msg(self, agentid):
         self.csi.outgoing_messages[agentid].put_nowait(

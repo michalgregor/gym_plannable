@@ -79,12 +79,15 @@ class ClientExceptionSafeTest(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 env = weakref.proxy(self.clients[0])
                 obs = env.reset()
+                any_obs_none = obs is None
 
                 for a in self.actions[::2]:
                     obs, rew, done, info = env.step(a)
+                    any_obs_none = any_obs_none or obs is None
                     if done: break
 
                 self.assertTrue(done)
+                self.assertFalse(any_obs_none)
 
             self.agent0_done = True
 
@@ -92,12 +95,15 @@ class ClientExceptionSafeTest(unittest.TestCase):
             with self.assertRaises(StopServerException):
                 env = weakref.proxy(self.clients[1])
                 obs = env.reset()
+                any_obs_none = obs is None
 
                 for a in self.actions[1::2]:
                     obs, rew, done, info = env.step(a)
+                    any_obs_none = any_obs_none or obs is None
                     if done: break
 
                 self.assertTrue(done)
+                self.assertFalse(any_obs_none)
 
             self.agent1_done = True
 

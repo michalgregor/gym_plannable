@@ -31,13 +31,10 @@ class AgentClientEnv(gym.Wrapper):
         self._reset_obs = None
 
     def reset(self):
-        print(f"resetting agent {self.agentid}", self._action_taken, self._ignore_multiple_reset, id(self))
-
         if not self.csi.started_event.is_set() or self.csi.finished_event.is_set():
             raise StopServerException("Calling reset and the multi agent server is not running.")
 
         if self._ignore_multiple_reset and not self._action_taken:
-            print(f"resetting agent {self.agentid} skipped")
             return self._reset_obs
 
         self._action_taken = False
@@ -54,12 +51,9 @@ class AgentClientEnv(gym.Wrapper):
         if self._ignore_multiple_reset:
             self._reset_obs = obs_msg.observation
 
-        print(f"resetting agent {self.agentid} done", self._action_taken, id(self))
         return obs_msg.observation
 
     def step(self, action):
-        print(f"stepping agent {self.agentid}", id(self))
-
         if not self.csi.started_event.is_set() or self.csi.finished_event.is_set():
             raise StopServerException("Calling step and the multi agent server is not running.")
 
@@ -74,8 +68,6 @@ class AgentClientEnv(gym.Wrapper):
             self.error_handler(self, RuntimeError("The server returned: {}.".format(obs_msg)))
 
         self._action_taken = True
-
-        print(f"stepping agent {self.agentid} done")
         return obs_msg.totuple()
 
     def close(self):
