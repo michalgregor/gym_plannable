@@ -4,7 +4,6 @@ import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
-from enum import IntEnum
 import collections
 import textwrap
 import random
@@ -325,7 +324,7 @@ class PositionActor(Actor, RenderObject):
         return np.array([self._position])
 
     def channel(self):
-        channel = np.zeros(self.grid_shape, dtype=np.bool)
+        channel = np.zeros(self.grid_shape, dtype=bool)
         channel[self._position[0], self._position[1]] = True
         return channel
     
@@ -413,25 +412,25 @@ class PosObservation(ObservationFunction):
         self.observation_space = gym.spaces.Box(
             low=np.zeros(2),
             high=np.asarray(grid_shape),
-            dtype=np.int
+            dtype=int
         )       
         
     def __call__(self, state):
-        return np.array(getattr(state, self.pos_agent_name).position, dtype=np.int)
+        return np.array(getattr(state, self.pos_agent_name).position, dtype=int)
         
 class MatrixObservation(ObservationFunction):
     def __init__(self, grid_shape, num_layers, observation_sequence=None):
         mat_shape = tuple(grid_shape) + (num_layers,)
         self.observation_sequence = observation_sequence
         self.observation_space = gym.spaces.Box(
-            low=np.zeros(mat_shape, dtype=np.bool),
-            high=np.ones(mat_shape, dtype=np.bool),
-            dtype=np.int
+            low=np.zeros(mat_shape, dtype=bool),
+            high=np.ones(mat_shape, dtype=bool),
+            dtype=int
         )
         
     def __call__(self, state):
         seq = self.observation_sequence or state.render_sequence
-        obs = np.dstack([obj.channel() for obj in seq]).astype(np.int)
+        obs = np.dstack([obj.channel() for obj in seq]).astype(int)
         return obs
 
 class WorldState(PlannableState):

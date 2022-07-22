@@ -1,4 +1,4 @@
-import collections
+from collections.abc import Iterable
 
 class ClosedEnvSignal(Exception):
     pass
@@ -14,7 +14,7 @@ def ensure_iterable(obj):
     Ensures that the returned object is an interable. Returns unmodified obj
      f it is an iterable, or [obj] if it is not.
     """
-    if not isinstance(obj, collections.abc.Iterable):
+    if not isinstance(obj, Iterable):
         obj = [obj]
     return obj
 

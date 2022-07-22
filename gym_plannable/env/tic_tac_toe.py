@@ -26,7 +26,7 @@ class TicTacToeState(PlannableStateDeterministic):
         state._num_agents = 2
         state._agent_turn = 0
         state.agent_turn_prev = None
-        state.board = np.full((state.size, state.size), -1, dtype=np.int)
+        state.board = np.full((state.size, state.size), -1, dtype=int)
         state.num_empty = state.size**2
         state.winner = []
         state.winning_seq = []
@@ -166,15 +166,15 @@ class TicTacToeEnv(PlannableEnv, MultiAgentEnv):
         super().__init__(num_agents=num_agents, **kwargs)
         
         self.observation_spaces = [gym.spaces.Box(
-            low=np.full((size, size), -1, dtype=np.int),
-            high=np.full((size, size), num_agents-1, dtype=np.int),
-            dtype=np.int
+            low=np.full((size, size), -1, dtype=int),
+            high=np.full((size, size), num_agents-1, dtype=int),
+            dtype=int
         )] * num_agents
 
         self.action_spaces = [gym.spaces.Box(
-            low=np.asarray((0, 0), dtype=np.int),
-            high=np.asarray((size-1, size-1), dtype=np.int),
-            dtype=np.int
+            low=np.asarray((0, 0), dtype=int),
+            high=np.asarray((size-1, size-1), dtype=int),
+            dtype=int
         )] * num_agents
 
         self._state = TicTacToeState(

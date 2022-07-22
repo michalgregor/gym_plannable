@@ -39,9 +39,9 @@ class DummyEnvTurnBased(MultiAgentEnv):
         info = [{}] * self.num_agents
 
         if self._step < self.num_steps:
-            done = np.zeros(self.num_agents, dtype=np.bool)
+            done = np.zeros(self.num_agents, dtype=bool)
         else:
-            done = np.ones(self.num_agents, dtype=np.bool)
+            done = np.ones(self.num_agents, dtype=bool)
 
         self._step += 1
 

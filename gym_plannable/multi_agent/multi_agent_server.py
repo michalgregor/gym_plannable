@@ -33,8 +33,8 @@ class MultiAgentServer:
         )
 
         self.obs_msg_buffer = [None for _ in range(self.num_agents)]
-        self._reset_expected = np.ones(self.multi_agent_env.num_agents, dtype=np.bool)
-        self._reset_requested = np.zeros(self.multi_agent_env.num_agents, dtype=np.bool)
+        self._reset_expected = np.ones(self.multi_agent_env.num_agents, dtype=bool)
+        self._reset_requested = np.zeros(self.multi_agent_env.num_agents, dtype=bool)
 
         self._obs = None
         self._info = None

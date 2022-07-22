@@ -1,4 +1,4 @@
-import collections
+from collections.abc import Sequence
 from gym_plannable.multi_agent import (
     ErrorMessage, MultiAgentServer, ActionMessage, ResetMessage,
     ObservationMessage, multi_agent_to_single_agent, handle_error_nostop
@@ -43,7 +43,7 @@ class EnvTestMixin:
             )
 
         agent_turn = self.env.agent_turn
-        self.assertIsInstance(agent_turn, collections.Sequence)
+        self.assertIsInstance(agent_turn, Sequence)
 
     def test_transition(self):
         self.env.reset()
