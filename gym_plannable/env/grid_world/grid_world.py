@@ -216,15 +216,16 @@ class DrapeObject(RenderObject):
     def occupies(self, pos):
         return self._channel[pos[0], pos[1]]
 
-class GoalDrape(TransitionObject, DrapeObject):
+class RewardDrape(TransitionObject, DrapeObject):
     def __init__(self, name, grid, symbol='G', player_names=None,
-                 goal_reward=0, **kwargs):
+                 goal_reward=0, set_done=False, **kwargs):
         super().__init__(name, grid, symbol, **kwargs)
         self.player_names = player_names or []
         if isinstance(self.player_names, str):
             self.player_names = [self.player_names]
 
         self.goal_reward = goal_reward
+        self.set_done = set_done
             
     def init(self, **params):
         pass
@@ -237,10 +238,19 @@ class GoalDrape(TransitionObject, DrapeObject):
             p = getattr(self.world, pn)
             if self.occupies(p.position):
                 p.reward += self.goal_reward
-                p.done = True
+
+                if self.set_done:
+                    p.done = True
     
     def all_next(self):
         return (({}, 1.0) for i in range(1))
+
+class GoalDrape(RewardDrape):
+    def __init__(self, name, grid, symbol='G', player_names=None,
+                 goal_reward=0, **kwargs):
+        super().__init__(
+            name, grid, symbol=symbol, player_names=player_names,
+            goal_reward=goal_reward, set_done=True, **kwargs)
 
 class ConstRewardObject(TransitionObject):
     def __init__(self, name, player_names=None, reward=-1, **kwargs):
