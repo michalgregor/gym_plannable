@@ -1,6 +1,5 @@
 from .maze import MazeEnvMA
 from .base_grid_world import make_sa_grid_world_env
-from ...multi_agent import Multi2SingleWrapper
 
 class CliffWalkerEnvMA(MazeEnvMA):
     def __init__(self, grid=None, observation_function=None,

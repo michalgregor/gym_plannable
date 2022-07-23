@@ -17,4 +17,5 @@ from .grid_world import (
 )
 
 from .maze import MazeEnv, MazeEnvMA
+from .base_grid_world import make_sa_grid_world_env
 from .cliff_walker import CliffWalkerEnv, CliffWalkerEnvMA
