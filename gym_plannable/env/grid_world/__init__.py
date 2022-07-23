@@ -5,6 +5,7 @@ from .grid_world import (
     Actor,
     BackgroundObject,
     DrapeObject,
+    RewardDrape,
     GoalDrape,
     NSWEActionSpec,
     PositionActor,
