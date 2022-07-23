@@ -1,11 +1,12 @@
+from .base_grid_world import BaseGridWorldEnvMA, make_sa_grid_world_env
+
 from .grid_world import (
-    GridWorldEnv, parse_grid_str, GoalDrape, PositionActor, BackgroundObject,
+    GoalDrape, PositionActor, BackgroundObject,
     DrapeObject, PosObservation, ConstRewardObject
 )
-from ...multi_agent import Multi2SingleWrapper
 from .logging import PathLogger
 
-class MazeEnvMA(GridWorldEnv):
+class MazeEnvMA(BaseGridWorldEnvMA):
     def __init__(self, grid=None, observation_function=None,
                  show_path=False, move_punishment=0,
                  cliff_punishment=-100, goal_reward=100,
@@ -24,7 +25,19 @@ class MazeEnvMA(GridWorldEnv):
             S000X00000
             """
         
-        grid_ar = parse_grid_str(grid)
+        super().__init__(
+            grid=grid, observation_function=observation_function,
+            show_path=show_path, move_punishment=move_punishment,
+            cliff_punishment=cliff_punishment, goal_reward=goal_reward,
+            action_spec=action_spec, show_path_kw=show_path_kw, **kwargs
+        )
+
+    def setup_env(
+        self, grid_ar, observation_function=None,
+        show_path=False, move_punishment=0,
+        cliff_punishment=-100, goal_reward=100,
+        action_spec=None, show_path_kw=dict(), **kwargs
+    ):
         cliff_punishment -= move_punishment
 
         goal = GoalDrape("goal", grid_ar, 'G', facecolor=None,
@@ -63,23 +76,7 @@ class MazeEnvMA(GridWorldEnv):
         if observation_function is None:
             observation_function = [PosObservation(grid_ar.shape,
                                                    pos_agent_name="player")]
-        
-        super().__init__(
-            grid_ar.shape,
-            transition_sequence=transition_sequence,
-            render_sequence=render_sequence,
-            observation_function=observation_function,
-            **kwargs
-        )
 
-class MazeEnv(Multi2SingleWrapper):
-    def __init__(self, grid=None, observation_function=None,
-                 show_path=False, move_punishment=0,
-                 cliff_punishment=-100, goal_reward=100,
-                 action_spec=None, show_path_kw=dict(), **kwargs):
-        env = MazeEnvMA(grid=grid, observation_function=observation_function,
-                        show_path=show_path, move_punishment=move_punishment,
-                        cliff_punishment=cliff_punishment,
-                        goal_reward=goal_reward, action_spec=action_spec,
-                        show_path_kw=show_path_kw, **kwargs)
-        super().__init__(env)
+        return transition_sequence, render_sequence, observation_function
+
+MazeEnv = make_sa_grid_world_env(MazeEnvMA)
