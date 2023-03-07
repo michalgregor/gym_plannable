@@ -82,7 +82,7 @@ class ClientExceptionSafeTest(unittest.TestCase):
                 any_obs_none = obs is None
 
                 for a in self.actions[::2]:
-                    obs, rew, done, info = env.step(a)
+                    obs, rew, done, truncated, info = env.step(a)
                     any_obs_none = any_obs_none or obs is None
                     if done: break
 
@@ -98,7 +98,7 @@ class ClientExceptionSafeTest(unittest.TestCase):
                 any_obs_none = obs is None
 
                 for a in self.actions[1::2]:
-                    obs, rew, done, info = env.step(a)
+                    obs, rew, done, truncated, info = env.step(a)
                     any_obs_none = any_obs_none or obs is None
                     if done: break
 

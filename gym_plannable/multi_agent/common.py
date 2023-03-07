@@ -83,14 +83,15 @@ class ActionMessage:
         self.agentid = agentid
         
 class ObservationMessage:
-    def __init__(self, observation, reward=0, done=False, info=None):
+    def __init__(self, observation, reward=0, done=False, truncated=False, info=None):
         self.observation = observation
         self.reward = reward
         self.done = done
+        self.truncated = truncated
         self.info = info or {}
 
     def totuple(self):
-        return self.observation, self.reward, self.done, self.info
+        return self.observation, self.reward, self.done, self.truncated, self.info
 
 class ErrorMessage:
     def __init__(self, msg):

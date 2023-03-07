@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 from .common import (
     StopServerException, ResetMessage, ObservationMessage,
     StopServerMessage, ErrorMessage, ActionMessage
@@ -51,7 +51,7 @@ class AgentClientEnv(gym.Wrapper):
         if self._ignore_multiple_reset:
             self._reset_obs = obs_msg.observation
 
-        return obs_msg.observation
+        return obs_msg.observation, obs_msg.info
 
     def step(self, action):
         if not self.csi.started_event.is_set() or self.csi.finished_event.is_set():

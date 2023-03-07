@@ -1,5 +1,5 @@
 import abc
-import gym
+import gymnasium as gym
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
@@ -749,12 +749,13 @@ class WorldState(PlannableState):
         """        
         return [np.array(self.observation_function[self.actor_step](self))] * self.num_agents
 
-class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
+class GridWorldEnv(PlannableEnv, MplFigEnv, MultiAgentEnv):
     def __init__(
         self,
         grid_shape,
         transition_sequence,
         render_sequence,
+        render_mode=None,
         observation_function=None,
         **kwargs
     ):
@@ -769,7 +770,11 @@ class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
         self.action_spaces = self._state.action_spaces
         self.reward_ranges = self._state.reward_ranges
         
-        super().__init__(num_agents=self._state.num_agents, **kwargs)
+        super().__init__(
+            render_mode=render_mode,
+            num_agents=self._state.num_agents,
+            **kwargs
+        )
 
     @property
     def agent_turn(self):
@@ -779,8 +784,7 @@ class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
         return self._state.agent_turn
     
     def _render(
-        self, fig, mode='human', close=False,
-        ax=None, render_sequence=None, skip=None
+        self, fig, close=False, ax=None, render_sequence=None, skip=None
     ):
         return self._state.render(fig=fig, ax=ax,
                                   render_sequence=render_sequence,
@@ -799,7 +803,12 @@ class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
 
     def reset(self):
         self._state.init(inplace=True)
-        return self._state.observations()
+        obs = self._state.observations()
+
+        if self.render_mode == 'human':
+            self.render()
+
+        return obs, [{} for i in range(self.num_agents)]
     
     def step(self, actions):
         self._state.next(actions, inplace=True)
@@ -807,7 +816,11 @@ class GridWorldEnv(PlannableEnv, MultiAgentEnv, MplFigEnv):
         obs = self._state.observations()
         rewards = self._state.rewards()       
         is_done = self._state.is_done()
-        info = [{}] * self.num_agents
+        infos = [{} for i in range(self.num_agents)]
+        truncated = [False for i in range(self.num_agents)]
 
-        return obs, rewards, is_done, info
+        if self.render_mode == 'human':
+            self.render()
+
+        return obs, rewards, is_done, truncated, infos
 

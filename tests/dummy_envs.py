@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import numpy as np
 from gym_plannable.multi_agent import MultiAgentEnv
 
@@ -19,7 +19,10 @@ class DummyEnvTurnBased(MultiAgentEnv):
 
     def reset(self):
         self._step = 0
-        return [self._step % self.num_agents for i in range(self.num_agents)]
+        return (
+            [self._step % self.num_agents for i in range(self.num_agents)],
+            [{} for i in range(self.num_agents)]
+        )
  
     def step(self, actions):
         # there is always exactly 1 agent turning
@@ -36,7 +39,8 @@ class DummyEnvTurnBased(MultiAgentEnv):
         obs = [self._step % self.num_agents for i in range(self.num_agents)]
         rewards = np.zeros(self.num_agents)
         rewards[agentid] = action
-        info = [{}] * self.num_agents
+        info = [{} for i in range(self.num_agents)]
+        truncated = [False for i in range(self.num_agents)]
 
         if self._step < self.num_steps:
             done = np.zeros(self.num_agents, dtype=bool)
@@ -45,4 +49,4 @@ class DummyEnvTurnBased(MultiAgentEnv):
 
         self._step += 1
 
-        return obs, rewards, done, info
+        return obs, rewards, done, truncated, info

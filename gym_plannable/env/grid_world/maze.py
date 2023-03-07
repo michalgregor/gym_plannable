@@ -7,7 +7,7 @@ from .grid_world import (
 from .logging import PathLogger
 
 class MazeEnvMA(BaseGridWorldEnvMA):
-    def __init__(self, grid=None, observation_function=None,
+    def __init__(self, grid=None, render_mode=None, observation_function=None,
                  show_path=False, move_punishment=0,
                  cliff_punishment=-100, goal_reward=100,
                  action_spec=None, show_path_kw=dict(), **kwargs):
@@ -26,7 +26,8 @@ class MazeEnvMA(BaseGridWorldEnvMA):
             """
         
         super().__init__(
-            grid=grid, observation_function=observation_function,
+            grid=grid, render_mode=render_mode,
+            observation_function=observation_function,
             show_path=show_path, move_punishment=move_punishment,
             cliff_punishment=cliff_punishment, goal_reward=goal_reward,
             action_spec=action_spec, show_path_kw=show_path_kw, **kwargs

@@ -152,7 +152,7 @@ class MultiAgentServer:
                 else:
                     info = dict(self._info[agentid], interrupted=True)
 
-                obs_msg = ObservationMessage(self._obs[agentid], 0, True, info)
+                obs_msg = ObservationMessage(self._obs[agentid], 0, True, True, info)
                 self.csi.outgoing_messages[agentid].put_nowait(obs_msg)
 
             self._perform_reset()
@@ -172,7 +172,7 @@ class MultiAgentServer:
                     
         else:
             try:
-                obs, rew, done, info = self.multi_agent_env.step(actions)
+                obs, rew, done, truncated, info = self.multi_agent_env.step(actions)
                 
             except BaseException as e:
                 for agentid in self._action_collector.agent_turn:
@@ -183,7 +183,7 @@ class MultiAgentServer:
 
             self._obs = obs
             self._filter_obs()
-            self._info = info    
+            self._info = info
             self._action_collector.reset(self.multi_agent_env.agent_turn)
             
             # signal all newly done agents
@@ -192,7 +192,8 @@ class MultiAgentServer:
             # communicate observations to the agents who are newly done
             for agentid in newly_done:
                 obs_msg = ObservationMessage(obs[agentid], rew[agentid],
-                                             done[agentid], info[agentid])
+                                             done[agentid], truncated[agentid],
+                                             info[agentid])
                 self.csi.outgoing_messages[agentid].put_nowait(obs_msg)
 
             # keep track of which agents were done and should reset
@@ -203,7 +204,8 @@ class MultiAgentServer:
 
             for agentid in set(self._action_collector.agent_turn).difference(newly_done):
                 obs_msg = ObservationMessage(obs[agentid], rew[agentid],
-                                             done[agentid], info[agentid])
+                                             done[agentid], truncated[agentid],
+                                             info[agentid])
 
                 if self._reset_requested[agentid]:
                     self._reset_requested[agentid] = False

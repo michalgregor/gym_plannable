@@ -3,7 +3,7 @@ from ..multi_agent import StopServerException, handle_error_nostop, MultiAgentEn
 from copy import deepcopy
 import numpy as np
 import traceback
-import gym
+import gymnasium as gym
 
 class TicTacToeState(PlannableStateDeterministic):
     def __init__(self, 
@@ -191,6 +191,12 @@ class TicTacToeEnv(PlannableEnv, MultiAgentEnv):
     def agent_turn(self):
         return self._state.agent_turn
 
+    def _get_info(self):
+        return [{
+            'winning_seq': self._state.winning_seq,
+            'winner': self._state.winner
+        } for i in range(self.num_agents)]
+
     def reset(self):
         self._state = TicTacToeState(
             self.observation_spaces,
@@ -199,7 +205,7 @@ class TicTacToeEnv(PlannableEnv, MultiAgentEnv):
             size=self._state.size
         )
         
-        return self._state.observations()
+        return self._state.observations(), self._get_info()
  
     def step(self, actions):
         """
@@ -212,12 +218,12 @@ class TicTacToeEnv(PlannableEnv, MultiAgentEnv):
         obs = self._state.observations()
         rewards = self._state.rewards()
         is_done = self._state.is_done()
-        info = [{
-            'winning_seq': self._state.winning_seq,
-            'winner': self._state.winner
-        }] * self.num_agents
-
-        return obs, rewards, is_done, info
+        
+        return (
+            obs, rewards, is_done,
+            [False for i in range(self.num_agents)],
+            self._get_info()
+        )
 
 try:
     from notebook_invoke import register_callback, remove_callback, jupyter_javascript_routines
@@ -248,7 +254,7 @@ try:
             }
             .ttt_container .cell-wrapper {
                 margin: 0.2em;
-                border: solid 1px;
+                border: solid 1px;``
                 text-align: center;
                 width: 5em;
                 height: 5em;
@@ -295,15 +301,16 @@ try:
             ))
 
         def reset(self):
-            obs = self.env.reset()
-            return {'board': obs.tolist()}
+            obs, info = self.env.reset()
+            return {'board': obs.tolist(), 'info': info}
 
         def step(self, action):
             try:
-                obs, reward, done, info = self.env.step(action)
+                obs, reward, terminated, truncated, info = self.env.step(action)
                 return {'board': obs.tolist(),
                         'reward': reward,
-                        'done': done,
+                        'terminated': terminated,
+                        'truncated': truncated,
                         'info': info}
             except StopServerException as e:
                 return None
@@ -376,7 +383,7 @@ try:
                     data => {
                         if (data !== null) {
                             self.update_board(data['board']);
-                            self.done = data['done'];
+                            self.done = data['terminated'];
                             if(self.done) self.update_done(
                                 data['info']['winner'],
                                 data['info']['winning_seq']

@@ -34,8 +34,10 @@ class EnvTestMixin:
         )
 
     def test_reset(self):
-        obs = self.env.reset()
+        obs, infos = self.env.reset()
         self.assertEqual(len(obs), self.env.num_agents)
+        self.assertEqual(len(infos), self.env.num_agents)
+
         for io, o in enumerate(obs):
             self.assertTrue(
                 self.env.observation_spaces[io].contains(o),
@@ -47,14 +49,15 @@ class EnvTestMixin:
 
     def test_transition(self):
         self.env.reset()
-        agent_turn = self.env.agent_turn       
+        agent_turn = self.env.agent_turn
 
         actions = [self.env.action_spaces[agentid].sample()
                 for agentid in agent_turn]
         
-        obs, rewards, done, info = self.env.step(actions)
+        obs, rewards, done, truncated, info = self.env.step(actions)
 
         self.assertEqual(len(obs), self.env.num_agents)
+        self.assertEqual(len(info), self.env.num_agents)
 
         for io, o in enumerate(obs):
             self.assertTrue(self.env.observation_spaces[io].contains(o))
@@ -223,7 +226,7 @@ class ClientTestMixin:
             any_obs_none = obs is None
 
             for a in self.actions[::2]:
-                obs, rew, done, info = env.step(a)
+                obs, rew, done, truncated, info = env.step(a)
                 any_obs_none = any_obs_none or obs is None
                 if done: break
 
@@ -237,7 +240,7 @@ class ClientTestMixin:
             any_obs_none = obs is None
 
             for a in self.actions[1::2]:
-                obs, rew, done, info = env.step(a)
+                obs, rew, done, truncated, info = env.step(a)
                 any_obs_none = any_obs_none or obs is None
                 if done: break
 
@@ -283,14 +286,14 @@ class IllegalActionTestMixin(ClientTestMixin):
             obs = env.reset()
 
             for a in self.agent0_actions0:
-                obs, rew, done, info = env.step(a)
+                obs, rew, done, truncated, info = env.step(a)
 
             with self.assertRaises(BaseException):
                 a = self.agent0_actions0[-1]
-                obs, rew, done, info = env.step(a)
+                obs, rew, done, truncated, info = env.step(a)
 
             for a in self.agent0_actions1:
-                obs, rew, done, info = env.step(a)
+                obs, rew, done, truncated, info = env.step(a)
                 if done: break
 
             self.assertTrue(done)
@@ -301,7 +304,7 @@ class IllegalActionTestMixin(ClientTestMixin):
             obs = env.reset()
 
             for a in self.agent1_actions:
-                obs, rew, done, info = env.step(a)
+                obs, rew, done, truncated, info = env.step(a)
                 if done: break
 
             self.assertTrue(done)

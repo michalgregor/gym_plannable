@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import abc
 
 class MultiAgentEnv(gym.Env):
@@ -46,7 +46,8 @@ class MultiAgentEnv(gym.Env):
         This returns what a single-agent step method would return except that:
         * a sequence of num_agents observations will be returned;
         * a sequence of num_agents rewards will be returned;
-        * a sequence of num_agents done flags will be returned;
+        * a sequence of num_agents terminated flags will be returned;
+        * a sequence of num_agents truncated flags will be returned;
         * a sequence of num_agents info dictionaries will be returned;
         
         Also, actions is a sequence (even if only a single agent is turning
@@ -84,11 +85,12 @@ class Multi2SingleWrapper(gym.Env):
         self.reward_range = self.env.reward_ranges[0]
 
     def reset(self):
-        return self.env.reset()[0]
+        obs, infos = self.env.reset()
+        return obs[0], infos[0]
 
     def step(self, action):
-        obs, reward, done, info = self.env.step([action])
-        return obs[0], reward[0], done[0], info[0]   
+        obs, reward, terminated, truncated, info = self.env.step([action])
+        return obs[0], reward[0], terminated[0], truncated[0], info[0]
         
     def __getattr__(self, name):
         if name.startswith('_'):

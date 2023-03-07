@@ -2,7 +2,7 @@ from .grid_world import GridWorldEnv, parse_grid_str
 from ...multi_agent import Multi2SingleWrapper
 
 class BaseGridWorldEnvMA(GridWorldEnv):
-    def __init__(self, grid=None, observation_function=None, **kwargs):       
+    def __init__(self, grid=None, render_mode=None, observation_function=None, **kwargs):       
         grid_ar = parse_grid_str(grid)
 
         (transition_sequence,
@@ -13,6 +13,7 @@ class BaseGridWorldEnvMA(GridWorldEnv):
             grid_ar.shape,
             transition_sequence=transition_sequence,
             render_sequence=render_sequence,
+            render_mode=render_mode,
             observation_function=observation_function
         )
 

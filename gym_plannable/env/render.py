@@ -1,13 +1,19 @@
-import gym
+import gymnasium as gym
 from IPython.display import display, HTML
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import time
 
 class MplFigEnv(gym.Env):
-    def __init__(self, figsize=None, delay=10, dpi=None,
+    metadata = {"render_modes": ["human"], "render_fps": 30}
+
+    def __init__(self, render_mode=None, figsize=None, delay=10, dpi=None,
                  notebook=True, display_inline=True, **kwargs):
         super().__init__(**kwargs)
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
+
         self.display_handle = None
         self.delay = delay
         self.display_inline = display_inline
@@ -38,18 +44,12 @@ class MplFigEnv(gym.Env):
             self.display_handle.update(self.render_fig)
             time.sleep(delay / 1000)
 
-    def render(self, mode='human', close=False,
-               fig=None, ax=None, update_display=True,
-               **kwargs):
+    def render(self, close=False, fig=None, ax=None, update_display=True, **kwargs):
         if fig is None:
-            self._render(self.render_fig, mode='human', close=False,
-                         ax=ax, **kwargs)
-
-            if self.display_inline and update_display:
-                self.update_display()
+            self._render(self.render_fig, close=False, ax=ax, **kwargs)
+            if self.display_inline and update_display: self.update_display()
         else:
-            self._render(fig, mode='human', close=False,
-                         ax=ax, **kwargs)
+            self._render(fig, close=False, ax=ax, **kwargs)
         
         if close: self.close()
 
