@@ -172,7 +172,7 @@ class MultiAgentServer:
                     
         else:
             try:
-                obs, rew, done, truncated, info = self.multi_agent_env.step(actions)
+                obs, rew, terminated, truncated, info = self.multi_agent_env.step(actions)
                 
             except BaseException as e:
                 for agentid in self._action_collector.agent_turn:
@@ -187,6 +187,7 @@ class MultiAgentServer:
             self._action_collector.reset(self.multi_agent_env.agent_turn)
             
             # signal all newly done agents
+            done = terminated | truncated
             newly_done = np.where(~self._reset_expected & done)[0]
 
             # communicate observations to the agents who are newly done
@@ -204,7 +205,7 @@ class MultiAgentServer:
 
             for agentid in set(self._action_collector.agent_turn).difference(newly_done):
                 obs_msg = ObservationMessage(obs[agentid], rew[agentid],
-                                             done[agentid], truncated[agentid],
+                                             terminated[agentid], truncated[agentid],
                                              info[agentid])
 
                 if self._reset_requested[agentid]:

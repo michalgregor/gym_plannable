@@ -43,10 +43,10 @@ class DummyEnvTurnBased(MultiAgentEnv):
         truncated = [False for i in range(self.num_agents)]
 
         if self._step < self.num_steps:
-            done = np.zeros(self.num_agents, dtype=bool)
+            terminated = np.zeros(self.num_agents, dtype=bool)
         else:
-            done = np.ones(self.num_agents, dtype=bool)
+            terminated = np.ones(self.num_agents, dtype=bool)
 
         self._step += 1
 
-        return obs, rewards, done, truncated, info
+        return obs, rewards, terminated, truncated, info

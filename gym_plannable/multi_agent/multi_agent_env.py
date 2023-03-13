@@ -15,7 +15,8 @@ class MultiAgentEnv(gym.Env):
 
         Similarly, reset() and step() also return sequences: i.e. reset()
         returns a sequence of observations, one for each agent and step()
-        returns several such sequences for observations, rewards, done and info.
+        returns several such sequences for observations, rewards, terminated,
+        truncated and info.
         
         Finally, actions are presented to step() as a sequence: environments
         can be either turn-based or use simultaneous actions, but a sequence

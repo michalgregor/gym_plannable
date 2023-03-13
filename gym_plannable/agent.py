@@ -42,10 +42,12 @@ class BaseAgent:
 
             while self.num_episodes is None or self.episode < self.num_episodes:
                 self.env.reset()
-                done = False
+                terminated = False
+                truncated = False
                 self.steps = 0
 
-                while not done and (self.max_steps is None or
+                while not terminated and not truncated and (
+                    self.max_steps is None or
                     self.steps < self.max_steps
                 ):
                     self.steps += 1
@@ -60,10 +62,12 @@ class BaseAgent:
                         end = time.perf_counter()
                         print("Action selected in {} s.".format(end-start))
 
-                    _, _, done, info = self.env.step(action)
+                    _, _, terminated, truncated, info = self.env.step(action)
 
                     if self.verbose and info.get('interrupted'):
-                        print("agent {} interrupted; done={}".format(self.env.agentid, done))
+                        print("agent {} interrupted; terminated={}; truncated={};".format(
+                            self.env.agentid, terminated, truncated
+                        ))
 
                 if not self.episode_scores is None:
                     self.episode_scores.append(copy.deepcopy(state.scores()))
