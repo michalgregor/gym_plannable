@@ -44,14 +44,14 @@ class MplFigEnv(gym.Env):
             self.display_handle.update(self.render_fig)
             time.sleep(delay / 1000)
 
-    def render(self, close=False, fig=None, ax=None, update_display=True, **kwargs):
+    def render(self, render_mode='human', close=False, fig=None, ax=None, update_display=True, **kwargs):
         if fig is None:
             self._render(self.render_fig, close=False, ax=ax, **kwargs)
             if self.display_inline and update_display: self.update_display()
         else:
             self._render(fig, close=False, ax=ax, **kwargs)
-        
-        if close: self.close()
+
+        # if close: self.close()
 
     def close(self):
         if self.display_inline:
