@@ -245,8 +245,7 @@ class MultiAgentServer:
         """
         Resets the underlying environment and do the necessary book-keeping.
         """        
-        self._obs = self.multi_agent_env.reset()
-        self._info = None
+        self._obs, self._info = self.multi_agent_env.reset()
         self._action_collector.reset(self.multi_agent_env.agent_turn)
         self._filter_obs()
         self._reset_expected[:] = True
