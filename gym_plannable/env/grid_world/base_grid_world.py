@@ -25,6 +25,8 @@ class BaseGridWorldEnvMA(GridWorldEnv):
 
 def make_sa_grid_world_env(env_class):
     class BaseGridWorld(Multi2SingleWrapper):
+        metadata = env_class.metadata
+
         def __init__(self, grid=None, observation_function=None, **kwargs):
             env = env_class(grid=grid, observation_function=observation_function, **kwargs)
             super().__init__(env)
