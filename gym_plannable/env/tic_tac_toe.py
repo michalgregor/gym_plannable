@@ -260,6 +260,7 @@ try:
                 height: 5em;
                 vertical-align: middle;
                 display: table;
+                text-align: center;
             }
 
             .ttt_container .cell {
