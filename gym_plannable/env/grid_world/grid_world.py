@@ -17,7 +17,7 @@ def parse_grid_str(gridstr, dedent=True):
         gridstr = textwrap.dedent(gridstr)
 
     lines = [list(line) for line in gridstr.splitlines() if len(line.strip())]
-    return np.array(lines, dtype=np.unicode_)
+    return np.array(lines, dtype=np.str_)
 
 class WorldObject:
     def __init__(self, name, **kwargs):
